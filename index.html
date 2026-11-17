@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CAN SLIM Stock Analyzer & Signal Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-hover: #263449;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.14);
+      --yellow: #f59e0b;
+      --yellow-bg: rgba(245, 158, 11, 0.14);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.14);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 20px;
+    }
+    .container { max-width: 1280px; margin: 0 auto; }
+    header {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; }
+    header p { color: var(--muted); font-size: 0.9rem; }
+    .badge-book {
+      background: rgba(56, 189, 248, 0.12); color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3); padding: 6px 12px;
+      border-radius: 999px; font-size: 0.8rem; font-weight: 600;
+    }
+
+    /* Search & API Bar */
+    .api-bar {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; margin-bottom: 16px; display: grid;
+      grid-template-columns: 1.3fr 1.5fr auto; gap: 12px; align-items: end;
+    }
+    @media (max-width: 860px) { .api-bar { grid-template-columns: 1fr; } }
+    .field-group label {
+      display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; font-weight: 600;
+    }
+    input, select {
+      width: 100%; background: #0f172a; border: 1px solid var(--border); color: var(--text);
+      padding: 9px 12px; border-radius: 8px; font-size: 0.92rem; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    .btn {
+      background: var(--accent); color: #0f172a; border: none; padding: 10px 16px;
+      border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary {
+      background: #334155; color: var(--text); border: 1px solid #475569;
+    }
+    .status-msg {
+      grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); min-height: 18px;
+    }
+
+    /* Presets Bar */
+    .presets-bar {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 20px;
+    }
+    .presets-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; margin-right: 4px; }
+    .preset-btn {
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      padding: 6px 12px; border-radius: 999px; font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .preset-btn:hover, .preset-btn.active {
+      border-color: var(--accent); background: rgba(56, 189, 248, 0.12);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot.green { background: var(--green); }
+    .dot.yellow { background: var(--yellow); }
+    .dot.red { background: var(--red); }
+
+    /* Main Grid */
+    .grid {
+      display: grid; grid-template-columns: 1.05fr 1.15fr; gap: 20px;
+    }
+    @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+    }
+    .card h2 {
+      font-size: 1.05rem; margin-bottom: 14px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px;
+    }
+    .form-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    @media (max-width: 540px) { .form-grid { grid-template-columns: 1fr; } }
+
+    /* Traffic Light Banner */
+    .signal-banner {
+      border-radius: 12px; padding: 18px; margin-bottom: 18px; border: 1px solid;
+      display: flex; align-items: flex-start; gap: 16px;
+    }
+    .signal-banner.green { background: var(--green-bg); border-color: var(--green); }
+    .signal-banner.yellow { background: var(--yellow-bg); border-color: var(--yellow); }
+    .signal-banner.red { background: var(--red-bg); border-color: var(--red); }
+
+    .traffic-light {
+      background: #0b1120; padding: 8px; border-radius: 12px; border: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 7px; flex-shrink: 0;
+    }
+    .bulb {
+      width: 22px; height: 22px; border-radius: 50%; opacity: 0.2; transition: all 0.2s;
+    }
+    .bulb.red { background: var(--red); }
+    .bulb.yellow { background: var(--yellow); }
+    .bulb.green { background: var(--green); }
+    .bulb.lit { opacity: 1; box-shadow: 0 0 14px currentColor; }
+
+    .signal-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 4px; }
+    .signal-banner.green .signal-title { color: var(--green); }
+    .signal-banner.yellow .signal-title { color: var(--yellow); }
+    .signal-banner.red .signal-title { color: var(--red); }
+    .signal-desc { font-size: 0.9rem; color: #e2e8f0; }
+
+    /* Checklist */
+    .checklist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+    .check-item {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #0f172a; padding: 9px 12px; border-radius: 8px; font-size: 0.86rem;
+      border: 1px solid var(--border);
+    }
+    .pill {
+      padding: 2px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+    }
+    .pill.pass { background: var(--green-bg); color: var(--green); }
+    .pill.warn { background: var(--yellow-bg); color: var(--yellow); }
+    .pill.fail { background: var(--red-bg); color: var(--red); }
+
+    /* Trade Plan Metrics */
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px;
+    }
+    @media (max-width: 540px) { .metrics-grid { grid-template-columns: 1fr; } }
+    .metric-box {
+      background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+    }
+    .metric-box span { display: block; font-size: 0.75rem; color: var(--muted); }
+    .metric-box strong { font-size: 1.1rem; font-weight: 800; margin-top: 2px; display: block; }
+
+    .charts-stack { display: grid; grid-template-columns: 1fr; gap: 18px; margin-top: 16px; }
+    .chart-wrap {
+      background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+      height: 250px; position: relative;
+    }
+    footer {
+      margin-top: 28px; text-align: center; color: var(--muted); font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>CAN SLIM Stock Analyzer &amp; Signal Calculator</h1>
+        <p>Rule-based portfolio screening &amp; risk management inspired by William J. O&rsquo;Neil&rsquo;s <em>The Successful Investor</em></p>
+      </div>
+      <div class="badge-book">3:1 Reward-to-Risk &bull; 7.5% Max Stop</div>
+    </header>
+
+    <!-- Live Ticker & Optional Finnhub API Bar -->
+    <div class="api-bar">
+      <div class="field-group">
+        <label for="tickerInput">Custom Stock Ticker (US Equities)</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="tickerInput" placeholder="e.g., NVDA, MSFT, J, AAPL" value="NVDA" />
+          <button class="btn" id="fetchBtn" type="button">Fetch Live</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label for="finnhubKey">Optional Finnhub.io Free API Key (Saved Locally in Browser)</label>
+        <input type="password" id="finnhubKey" placeholder="Paste free Finnhub API key for direct live quotes..." />
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary" id="savePresetBtn" type="button">+ Save Preset</button>
+      </div>
+      <div class="status-msg" id="statusMsg">Ready. Select a preset below or enter a custom ticker + Finnhub key to fetch live metrics.</div>
+    </div>
+
+    <!-- Watchlist Presets -->
+    <div class="presets-bar" id="presetsBar">
+      <span class="presets-label">Watchlist Presets:</span>
+    </div>
+
+    <div class="grid">
+      <!-- Left Column: Inputs -->
+      <div class="card">
+        <h2>
+          <span>1. CAN SLIM &amp; Position Inputs</span>
+          <span id="activeTickerBadge" style="color:var(--accent); font-size:0.9rem;">NVDA</span>
+        </h2>
+
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="marketTrend">M &mdash; General Market Trend</label>
+            <select id="marketTrend">
+              <option value="uptrend">Confirmed Uptrend (Green Light)</option>
+              <option value="choppy" selected>Uptrend Under Pressure / Choppy</option>
+              <option value="correction">Market in Correction (4+ Dist. Days)</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="chartSetup">N &mdash; Chart Base &amp; Pivot Status</label>
+            <select id="chartSetup">
+              <option value="breakout">Proper Breakout (0% to +5% of Pivot)</option>
+              <option value="building" selected>Constructive Base Building (Wait)</option>
+              <option value="extended">Extended (&gt;5% Past Pivot - Do Not Chase)</option>
+              <option value="downtrend">Broken / Below Key Moving Averages</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="price">Current Stock Price ($)</label>
+            <input type="number" id="price" step="0.01" value="162.85" />
+          </div>
+
+          <div class="field-group">
+            <label for="pivotPrice">Breakout Pivot / 52-Wk High ($)</label>
+            <input type="number" id="pivotPrice" step="0.01" value="165.00" />
+          </div>
+
+          <div class="field-group">
+            <label for="qEps">C &mdash; Current Quarterly EPS YoY (%)</label>
+            <input type="number" id="qEps" step="0.1" value="129.0" />
+          </div>
+
+          <div class="field-group">
+            <label for="aEps">A &mdash; 3-Yr Annual EPS Growth (%)</label>
+            <input type="number" id="aEps" step="0.1" value="210.0" />
+          </div>
+
+          <div class="field-group">
+            <label for="roe">A &mdash; Return on Equity / ROE (%)</label>
+            <input type="number" id="roe" step="0.1" value="110.0" />
+          </div>
+
+          <div class="field-group">
+            <label for="volSurge">S &mdash; Breakout Volume vs Avg (%)</label>
+            <input type="number" id="volSurge" step="1" value="10" />
+          </div>
+
+          <div class="field-group">
+            <label for="rsRating">L &mdash; Relative Strength Rating (1&ndash;99)</label>
+            <input type="number" id="rsRating" min="1" max="99" value="88" />
+          </div>
+
+          <div class="field-group">
+            <label for="instSponsorship">I &mdash; Institutional Sponsorship</label>
+            <select id="instSponsorship">
+              <option value="strong" selected>Strong Fund Accumulation</option>
+              <option value="moderate">Moderate / Stable Ownership</option>
+              <option value="weak">Weak / Low-Priced Speculative</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="portfolioSize">Total Portfolio Capital ($)</label>
+            <input type="number" id="portfolioSize" step="500" value="25000" />
+          </div>
+
+          <div class="field-group">
+            <label for="allocPct">Target Position Weight (%)</label>
+            <input type="number" id="allocPct" min="1" max="100" value="20" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Signal, Rules & Charts -->
+      <div class="card">
+        <h2>
+          <span>2. O&rsquo;Neil Signal &amp; Risk Plan</span>
+          <span id="scoreBadge" style="font-size:0.85rem; color:var(--muted);">Score: -- / 100</span>
+        </h2>
+
+        <div class="signal-banner yellow" id="signalBanner">
+          <div class="traffic-light">
+            <div class="bulb red" id="bulbRed"></div>
+            <div class="bulb yellow lit" id="bulbYellow"></div>
+            <div class="bulb green" id="bulbGreen"></div>
+          </div>
+          <div>
+            <div class="signal-title" id="signalTitle">YELLOW &mdash; WATCHLIST / WAIT</div>
+            <div class="signal-desc" id="signalDesc">Analyzing stock parameters...</div>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <span>Suggested Shares &amp; Cost</span>
+            <strong id="posShares">30 sh ($4,886)</strong>
+          </div>
+          <div class="metric-box">
+            <span style="color:var(--red);">Hard Stop-Loss (-7.5%)</span>
+            <strong id="stopPrice" style="color:var(--red);">$150.64</strong>
+          </div>
+          <div class="metric-box">
+            <span style="color:var(--green);">Profit Target (+20% to +25%)</span>
+            <strong id="targetPrice" style="color:var(--green);">$195.42 &ndash; $203.56</strong>
+          </div>
+        </div>
+
+        <div class="checklist" id="checklist"></div>
+
+        <div class="charts-stack">
+          <div class="chart-wrap">
+            <canvas id="radarChart"></canvas>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="riskChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      Educational portfolio screening tool based on CAN SLIM principles from <em>The Successful Investor</em> by William J. O&rsquo;Neil. Not financial advice.
+    </footer>
+  </div>
+
+  <script>
+    const DEFAULT_PRESETS = [
+      {
+        ticker: "NVDA", label: "NVDA", dot: "yellow",
+        marketTrend: "choppy", chartSetup: "building",
+        price: 162.85, pivotPrice: 165.00, qEps: 129.0, aEps: 210.0,
+        roe: 110.0, volSurge: 10, rsRating: 88, instSponsorship: "strong"
+      },
+      {
+        ticker: "MSFT", label: "MSFT", dot: "yellow",
+        marketTrend: "choppy", chartSetup: "building",
+        price: 523.50, pivotPrice: 540.00, qEps: 32.2, aEps: 23.0,
+        roe: 35.5, volSurge: 15, rsRating: 84, instSponsorship: "strong"
+      },
+      {
+        ticker: "JNJ", label: "JNJ", dot: "red",
+        marketTrend: "choppy", chartSetup: "building",
+        price: 286.00, pivotPrice: 290.00, qEps: -2.0, aEps: 17.7,
+        roe: 24.0, volSurge: 0, rsRating: 65, instSponsorship: "moderate"
+      },
+      {
+        ticker: "PLUG", label: "PLUG", dot: "red",
+        marketTrend: "choppy", chartSetup: "downtrend",
+        price: 1.50, pivotPrice: 4.33, qEps: -15.0, aEps: -25.0,
+        roe: -35.0, volSurge: -10, rsRating: 18, instSponsorship: "weak"
+      },
+      {
+        ticker: "IDEAL", label: "Ideal Green Example", dot: "green",
+        marketTrend: "uptrend", chartSetup: "breakout",
+        price: 122.40, pivotPrice: 120.00, qEps: 58.0, aEps: 42.0,
+        roe: 28.0, volSurge: 65, rsRating: 94, instSponsorship: "strong"
+      }
+    ];
+
+    let customPresets = JSON.parse(localStorage.getItem("canslim_custom_presets") || "[]");
+    let radarChartInstance = null;
+    let riskChartInstance = null;
+
+    const el = (id) => document.getElementById(id);
+
+    // Load saved Finnhub key
+    const savedKey = localStorage.getItem("canslim_finnhub_key") || "";
+    el("finnhubKey").value = savedKey;
+    el("finnhubKey").addEventListener("input", (e) => {
+      localStorage.setItem("canslim_finnhub_key", e.target.value.trim());
+    });
+
+    function renderPresets() {
+      const bar = el("presetsBar");
+      bar.innerHTML = '<span class="presets-label">Watchlist Presets:</span>';
+      const all = [...DEFAULT_PRESETS, ...customPresets];
+      all.forEach((p, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "preset-btn";
+        btn.type = "button";
+        btn.innerHTML = `<span class="dot ${p.dot || 'yellow'}"></span>${p.label || p.ticker}`;
+        btn.onclick = () => loadPreset(p);
+        bar.appendChild(btn);
+      });
+    }
+
+    function loadPreset(p) {
+      el("tickerInput").value = p.ticker;
+      el("activeTickerBadge").textContent = p.ticker;
+      el("marketTrend").value = p.marketTrend;
+      el("chartSetup").value = p.chartSetup;
+      el("price").value = p.price;
+      el("pivotPrice").value = p.pivotPrice;
+      el("qEps").value = p.qEps;
+      el("aEps").value = p.aEps;
+      el("roe").value = p.roe;
+      el("volSurge").value = p.volSurge;
+      el("rsRating").value = p.rsRating;
+      el("instSponsorship").value = p.instSponsorship;
+      evaluate();
+    }
+
+    el("savePresetBtn").addEventListener("click", () => {
+      const ticker = (el("tickerInput").value || "CUSTOM").trim().toUpperCase();
+      const { color } = computeSignal();
+      const entry = {
+        ticker,
+        label: ticker,
+        dot: color,
+        marketTrend: el("marketTrend").value,
+        chartSetup: el("chartSetup").value,
+        price: parseFloat(el("price").value) || 0,
+        pivotPrice: parseFloat(el("pivotPrice").value) || 0,
+        qEps: parseFloat(el("qEps").value) || 0,
+        aEps: parseFloat(el("aEps").value) || 0,
+        roe: parseFloat(el("roe").value) || 0,
+        volSurge: parseFloat(el("volSurge").value) || 0,
+        rsRating: parseFloat(el("rsRating").value) || 50,
+        instSponsorship: el("instSponsorship").value
+      };
+      customPresets = customPresets.filter((item) => item.ticker !== ticker);
+      customPresets.push(entry);
+      localStorage.setItem("canslim_custom_presets", JSON.stringify(customPresets));
+      renderPresets();
+      el("statusMsg").textContent = `Saved ${ticker} to your browser watchlist presets.`;
+    });
+
+    async function fetchLiveStock() {
+      const ticker = el("tickerInput").value.trim().toUpperCase();
+      if (!ticker) return;
+      el("activeTickerBadge").textContent = ticker;
+      const apiKey = el("finnhubKey").value.trim();
+
+      if (!apiKey) {
+        el("statusMsg").textContent = `No Finnhub API key entered. Paste a free key from finnhub.io above for live ${ticker} quotes, or enter values manually below.`;
+        return;
+      }
+
+      el("statusMsg").textContent = `Fetching live quote & financial metrics for ${ticker} from Finnhub...`;
+      try {
+        const [quoteRes, metricRes] = await Promise.all([
+          fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${encodeURIComponent(apiKey)}`),
+          fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${encodeURIComponent(apiKey)}`)
+        ]);
+
+        if (!quoteRes.ok || !metricRes.ok) throw new Error("API HTTP error");
+        const quote = await quoteRes.json();
+        const metricData = await metricRes.json();
+        const m = metricData.metric || {};
+
+        if (!quote.c || quote.c === 0) {
+          el("statusMsg").textContent = `Ticker "${ticker}" returned $0. Check that it is a valid US stock symbol.`;
+          return;
+        }
+
+        el("price").value = Number(quote.c).toFixed(2);
+        if (m["52WeekHigh"]) el("pivotPrice").value = Number(m["52WeekHigh"]).toFixed(2);
+        if (typeof m.epsGrowthQuarterlyYoy === "number") el("qEps").value = m.epsGrowthQuarterlyYoy.toFixed(1);
+        if (typeof m.epsGrowth3Y === "number") el("aEps").value = m.epsGrowth3Y.toFixed(1);
+        if (typeof m.roeTTM === "number") el("roe").value = m.roeTTM.toFixed(1);
+
+        el("statusMsg").textContent = `Live data loaded for ${ticker}: $${Number(quote.c).toFixed(2)} (${quote.dp >= 0 ? "+" : ""}${Number(quote.dp || 0).toFixed(2)}% today). Verify chart pivot & volume surge below.`;
+        evaluate();
+      } catch (err) {
+        el("statusMsg").textContent = `Could not reach Finnhub from this browser context (${err.message}). Verify your API key or enter metrics manually.`;
+      }
+    }
+
+    el("fetchBtn").addEventListener("click", fetchLiveStock);
+    el("tickerInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") fetchLiveStock();
+    });
+
+    function computeSignal() {
+      const marketTrend = el("marketTrend").value;
+      const chartSetup = el("chartSetup").value;
+      const price = parseFloat(el("price").value) || 0;
+      const pivotPrice = parseFloat(el("pivotPrice").value) || price;
+      const qEps = parseFloat(el("qEps").value) || 0;
+      const aEps = parseFloat(el("aEps").value) || 0;
+      const roe = parseFloat(el("roe").value) || 0;
+      const volSurge = parseFloat(el("volSurge").value) || 0;
+      const rsRating = parseFloat(el("rsRating").value) || 0;
+      const instSponsorship = el("instSponsorship").value;
+
+      const checks = [
+        {
+          name: "Price Floor (O'Neil >= $15 Institutional Minimum)",
+          status: price >= 15 ? "pass" : "fail",
+          detail: `$${price.toFixed(2)}`
+        },
+        {
+          name: "C — Current Quarterly EPS Growth (>= 25% YoY)",
+          status: qEps >= 25 ? "pass" : (qEps >= 12 ? "warn" : "fail"),
+          detail: `${qEps.toFixed(1)}%`
+        },
+        {
+          name: "A — Annual 3-Yr EPS (>= 25%) & ROE (>= 17%)",
+          status: (aEps >= 25 && roe >= 17) ? "pass" : ((aEps >= 15 || roe >= 17) ? "warn" : "fail"),
+          detail: `EPS ${aEps.toFixed(1)}% | ROE ${roe.toFixed(1)}%`
+        },
+        {
+          name: "N — Chart Breakout Timing (0% to +5% of Pivot)",
+          status: chartSetup === "breakout" ? "pass" : (chartSetup === "building" ? "warn" : "fail"),
+          detail: chartSetup.toUpperCase()
+        },
+        {
+          name: "S — Breakout Volume Surge (>= +40% vs Avg)",
+          status: volSurge >= 40 ? "pass" : (volSurge >= 10 ? "warn" : "fail"),
+          detail: `${volSurge >= 0 ? "+" : ""}${volSurge}%`
+        },
+        {
+          name: "L & I — Leader RS (>= 80) & Institutional Backing",
+          status: (rsRating >= 80 && instSponsorship === "strong") ? "pass" : (rsRating >= 70 ? "warn" : "fail"),
+          detail: `RS ${rsRating} | ${instSponsorship}`
+        },
+        {
+          name: "M — General Market Direction",
+          status: marketTrend === "uptrend" ? "pass" : (marketTrend === "choppy" ? "warn" : "fail"),
+          detail: marketTrend.toUpperCase()
+        }
+      ];
+
+      // Score calculation (0 - 100)
+      let score = 0;
+      checks.forEach((c) => {
+        if (c.status === "pass") score += 14.3;
+        else if (c.status === "warn") score += 7;
+      });
+      score = Math.min(100, Math.round(score));
+
+      // Determine Traffic Light
+      let color = "yellow";
+      let title = "YELLOW — WATCHLIST / HOLD & WAIT";
+      let desc = "Solid underlying traits, but either the general market is not in a confirmed uptrend or the stock has not yet flashed a high-volume breakout pivot.";
+
+      const hardRed = price < 15 || qEps < 10 || chartSetup === "downtrend" || instSponsorship === "weak";
+      const allGreen = (
+        marketTrend === "uptrend" &&
+        chartSetup === "breakout" &&
+        price >= 15 &&
+        qEps >= 25 &&
+        volSurge >= 40 &&
+        rsRating >= 80
+      );
+
+      if (hardRed) {
+        color = "red";
+        title = "RED — AVOID / SELL & PROTECT CAPITAL";
+        desc = "Fails core CAN SLIM standards (below $15 institutional floor, weak quarterly earnings growth, or broken downtrend). Do not buy or average down.";
+      } else if (allGreen) {
+        color = "green";
+        title = "GREEN — BUY BREAKOUT (WITH 7.5% STOP)";
+        desc = "Confirmed market uptrend + strong quarterly EPS growth + high-volume breakout near pivot. Enter position and place an immediate -7.5% stop-loss.";
+      } else if (marketTrend === "correction") {
+        color = "yellow";
+        title = "YELLOW — MARKET IN CORRECTION (HOLD CASH)";
+        desc = "Even strong leaders fail 75% of the time during market corrections. Keep on watchlist and wait for a market Follow-Through Day.";
+      } else if (chartSetup === "extended") {
+        color = "yellow";
+        title = "YELLOW — EXTENDED PAST PIVOT (DO NOT CHASE)";
+        desc = "Stock is more than 5% above its proper buy point. Wait for a constructive pullback or new base before adding shares.";
+      }
+
+      return { color, title, desc, score, checks, price, pivotPrice, qEps, aEps, roe, volSurge, rsRating };
+    }
+
+    function evaluate() {
+      const res = computeSignal();
+      el("scoreBadge").textContent = `CAN SLIM Score: ${res.score} / 100`;
+
+      const banner = el("signalBanner");
+      banner.className = `signal-banner ${res.color}`;
+      el("bulbRed").classList.toggle("lit", res.color === "red");
+      el("bulbYellow").classList.toggle("lit", res.color === "yellow");
+      el("bulbGreen").classList.toggle("lit", res.color === "green");
+      el("signalTitle").textContent = res.title;
+      el("signalDesc").textContent = res.desc;
+
+      // Position Sizing & Risk Levels
+      const port = parseFloat(el("portfolioSize").value) || 0;
+      const alloc = (parseFloat(el("allocPct").value) || 0) / 100;
+      const dollars = port * alloc;
+      const shares = res.price > 0 ? Math.floor(dollars / res.price) : 0;
+      const actualCost = shares * res.price;
+      const stop = res.price * 0.925;
+      const t20 = res.price * 1.20;
+      const t25 = res.price * 1.25;
+
+      el("posShares").textContent = `${shares} sh ($${actualCost.toLocaleString(undefined, { maximumFractionDigits: 0 })})`;
+      el("stopPrice").textContent = `$${stop.toFixed(2)}`;
+      el("targetPrice").textContent = `$${t20.toFixed(2)} – $${t25.toFixed(2)}`;
+
+      // Render Checklist
+      const list = el("checklist");
+      list.innerHTML = "";
+      res.checks.forEach((c) => {
+        const row = document.createElement("div");
+        row.className = "check-item";
+        row.innerHTML = `
+          <span>${c.name}</span>
+          <span class="pill ${c.status}">${c.status.toUpperCase()} (${c.detail})</span>
+        `;
+        list.appendChild(row);
+      });
+
+      updateCharts(res, stop, t20, t25);
+    }
+
+    function updateCharts(res, stop, t20, t25) {
+      const norm = (val, target) => Math.max(0, Math.min(120, Math.round((val / target) * 100)));
+      const radarData = [
+        norm(res.qEps, 25),
+        norm(res.aEps, 25),
+        norm(res.roe, 17),
+        norm(res.volSurge + 50, 90),
+        norm(res.rsRating, 85),
+        res.price >= 15 ? 100 : Math.round((res.price / 15) * 100)
+      ];
+
+      if (radarChartInstance) radarChartInstance.destroy();
+      radarChartInstance = new Chart(el("radarChart"), {
+        type: "radar",
+        data: {
+          labels: ["Qtr EPS (25%+)", "Annual EPS (25%+)", "ROE (17%+)", "Vol Surge (+40%)", "RS Rating (85+)", "Price >= $15"],
+          datasets: [
+            {
+              label: `${el("activeTickerBadge").textContent} vs O'Neil Benchmark (%)`,
+              data: radarData,
+              backgroundColor: "rgba(56, 189, 248, 0.22)",
+              borderColor: "#38bdf8",
+              pointBackgroundColor: "#38bdf8"
+            },
+            {
+              label: "O'Neil Minimum Threshold (100%)",
+              data: [100, 100, 100, 100, 100, 100],
+              backgroundColor: "rgba(16, 185, 129, 0.06)",
+              borderColor: "#10b981",
+              borderDash: [5, 5],
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0, max: 120,
+              ticks: { display: false },
+              grid: { color: "#334155" },
+              angleLines: { color: "#334155" },
+              pointLabels: { color: "#cbd5e1", font: { size: 11 } }
+            }
+          },
+          plugins: { legend: { labels: { color: "#e2e8f0", font: { size: 11 } } } }
+        }
+      });
+
+      if (riskChartInstance) riskChartInstance.destroy();
+      riskChartInstance = new Chart(el("riskChart"), {
+        type: "bar",
+        data: {
+          labels: ["Hard Stop (-7.5%)", "Current Price", "Pivot / High", "Target (+20%)", "Stretch (+25%)"],
+          datasets: [{
+            label: "3:1 Reward-to-Risk Price Levels ($)",
+            data: [stop, res.price, res.pivotPrice, t20, t25].map((v) => Number(v.toFixed(2))),
+            backgroundColor: ["#ef4444", "#38bdf8", "#f59e0b", "#10b981", "#059669"],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: "#334155" }, ticks: { color: "#cbd5e1" } },
+            y: { grid: { display: false }, ticks: { color: "#cbd5e1", font: { size: 11 } } }
+          },
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: "O'Neil Price & 3:1 Risk-Reward Map ($)", color: "#e2e8f0", font: { size: 12 } }
+          }
+        }
+      });
+    }
+
+    document.querySelectorAll("input, select").forEach((input) => {
+      if (input.id !== "finnhubKey" && input.id !== "tickerInput") {
+        input.addEventListener("input", evaluate);
+        input.addEventListener("change", evaluate);
+      }
+    });
+
+    renderPresets();
+    evaluate();
+  </script>
+</body>
+</html>
