@@ -66,7 +66,7 @@
     .btn-secondary { background: #334155; color: var(--text); border: 1px solid #475569; }
     .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--red); border: 1px solid var(--red); }
     .status-msg {
-      grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); min-height: 18px;
+      grid-column: 1 / -1; font-size: 0.82rem; color: var(--accent); min-height: 18px; font-weight: 600;
     }
 
     /* Tabs Bar for Portfolios */
@@ -214,9 +214,8 @@
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-danger" id="deletePortfolioBtn" type="button" title="Delete current portfolio">Delete Portfolio</button>
         <button class="btn btn-secondary" id="exportBtn" type="button" title="Export portfolios to JSON file">Export Data</button>
-        <label class="btn btn-secondary" style="cursor:pointer; margin-bottom:0; display:inline-flex; align-items:center;">
-          Import Data <input type="file" id="importFile" accept=".json" style="display:none;" />
-        </label>
+        <button class="btn btn-secondary" id="importTriggerBtn" type="button" title="Import JSON backup">Import Data</button>
+        <input type="file" id="importFile" accept=".json,application/json" style="display:none;" />
       </div>
       <div class="status-msg" id="statusMsg">Ready. Switch or create portfolios below, add stocks, and fetch live quotes.</div>
     </div>
@@ -466,6 +465,11 @@
       el("statusMsg").textContent = "Portfolios exported successfully to JSON backup.";
     });
 
+    // Robust Import Trigger & Handler
+    el("importTriggerBtn").addEventListener("click", () => {
+      el("importFile").click();
+    });
+
     el("importFile").addEventListener("change", (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -474,18 +478,27 @@
         try {
           const imported = JSON.parse(e.target.result);
           if (Array.isArray(imported) && imported.length > 0) {
+            // Validate basic structure of imported portfolios
+            const valid = imported.every(p => p.id && p.name && Array.isArray(p.stocks));
+            if (!valid) {
+              throw new Error("JSON structure does not match expected multi-portfolio schema.");
+            }
             portfolios = imported;
             activePortfolioId = portfolios[0].id;
             activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
             saveState();
             renderAll();
-            el("statusMsg").textContent = "Portfolios imported successfully!";
+            el("statusMsg").textContent = "Portfolios imported successfully from JSON backup!";
           } else {
-            alert("Invalid portfolio file format.");
+            alert("Invalid portfolio file format: Root must be a non-empty array.");
           }
         } catch (err) {
           alert("Error parsing JSON file: " + err.message);
+          el("statusMsg").textContent = "Import failed: " + err.message;
         }
+      };
+      reader.onerror = function() {
+        alert("Error reading file.");
       };
       reader.readAsText(file);
       event.target.value = "";
@@ -494,3 +507,508 @@
     function getActivePortfolio() {
       return portfolios.find((p) => p.id === activePortfolioId) || portfolios[0];
     }
+
+    function getActiveStock() {
+      const p = getActivePortfolio();
+      if (!p || !p.stocks) return null;
+      return p.stocks.find((s) => s.ticker === activeTicker) || p.stocks[0] || null;
+    }
+
+    function renderTabs() {
+      const container = el("portfolioTabs");
+      container.innerHTML = "";
+      portfolios.forEach((p) => {
+        const btn = document.createElement("button");
+        btn.className = `tab-btn ${p.id === activePortfolioId ? "active" : ""}`;
+        btn.innerHTML = `${p.name} <span class="tab-badge">${p.stocks.length}</span>`;
+        btn.onclick = () => {
+          activePortfolioId = p.id;
+          const ap = getActivePortfolio();
+          activeTicker = ap.stocks.length > 0 ? ap.stocks[0].ticker : null;
+          el("portfolioCapital").value = ap.capital;
+          renderAll();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    el("createPortfolioBtn").addEventListener("click", () => {
+      const name = el("newPortfolioName").value.trim();
+      if (!name) return;
+      const newId = "port-" + Date.now();
+      portfolios.push({
+        id: newId,
+        name: name,
+        capital: 25000,
+        stocks: []
+      });
+      el("newPortfolioName").value = "";
+      activePortfolioId = newId;
+      activeTicker = null;
+      saveState();
+      renderAll();
+      el("statusMsg").textContent = `Created new portfolio: "${name}"`;
+    });
+
+    el("deletePortfolioBtn").addEventListener("click", () => {
+      if (portfolios.length <= 1) {
+        alert("You must keep at least one portfolio.");
+        return;
+      }
+      if (confirm(`Are you sure you want to delete portfolio "${getActivePortfolio().name}"?`)) {
+        portfolios = portfolios.filter((p) => p.id !== activePortfolioId);
+        activePortfolioId = portfolios[0].id;
+        activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
+        saveState();
+        renderAll();
+        el("statusMsg").textContent = "Portfolio deleted.";
+      }
+    });
+
+    el("portfolioCapital").addEventListener("input", (e) => {
+      const p = getActivePortfolio();
+      p.capital = parseFloat(e.target.value) || 0;
+      saveState();
+      evaluateStock();
+      updatePortfolioAnalysis();
+    });
+
+    function renderStockCards() {
+      const p = getActivePortfolio();
+      el("activePortfolioLabel").textContent = p.name;
+      el("portfolioTitleCount").textContent = p.stocks.length;
+      el("portfolioCapital").value = p.capital;
+
+      const container = el("stockCardsContainer");
+      container.innerHTML = "";
+
+      if (p.stocks.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:var(--muted); padding:20px; font-size:0.85rem;">No stocks in this portfolio yet. Use the quick add box above to fetch and add stocks.</div>`;
+        return;
+      }
+
+      p.stocks.forEach((s) => {
+        const { color } = computeStockSignal(s);
+        const card = document.createElement("div");
+        card.className = `stock-row-card ${s.ticker === activeTicker ? "active" : ""}`;
+        card.innerHTML = `
+          <div>
+            <strong style="font-size:1rem; display:flex; align-items:center; gap:6px;">
+              <span>${s.ticker}</span>
+            </strong>
+            <span style="font-size:0.75rem; color:var(--muted);">Pivot: $${s.pivotPrice.toFixed(2)}</span>
+          </div>
+          <div>
+            <span style="font-size:0.72rem; color:var(--muted);">Price</span>
+            <strong style="font-size:0.9rem;">$${s.price.toFixed(2)}</strong>
+          </div>
+          <div>
+            <span style="font-size:0.72rem; color:var(--muted);">Qtr EPS</span>
+            <strong style="font-size:0.9rem; color:${s.qEps >= 25 ? 'var(--green)' : (s.qEps >= 12 ? 'var(--yellow)' : 'var(--red)')};">${s.qEps >= 0 ? '+' : ''}${s.qEps}%</strong>
+          </div>
+          <div>
+            <span style="font-size:0.72rem; color:var(--muted);">Weight</span>
+            <strong style="font-size:0.9rem;">${s.allocPct}%</strong>
+          </div>
+          <div>
+            <span class="pill ${color === 'green' ? 'pass' : (color === 'yellow' ? 'warn' : 'fail')}">${color.toUpperCase()}</span>
+          </div>
+        `;
+        card.onclick = () => {
+          activeTicker = s.ticker;
+          loadStockIntoForm(s);
+          renderStockCards();
+          evaluateStock();
+        };
+        container.appendChild(card);
+      });
+    }
+
+    function loadStockIntoForm(s) {
+      if (!s) {
+        el("editingStockTitle").textContent = "Editing: None";
+        return;
+      }
+      el("editingStockTitle").textContent = `Editing: ${s.ticker}`;
+      el("marketTrend").value = s.marketTrend;
+      el("chartSetup").value = s.chartSetup;
+      el("price").value = s.price;
+      el("pivotPrice").value = s.pivotPrice;
+      el("qEps").value = s.qEps;
+      el("aEps").value = s.aEps;
+      el("roe").value = s.roe;
+      el("volSurge").value = s.volSurge;
+      el("rsRating").value = s.rsRating;
+      el("instSponsorship").value = s.instSponsorship;
+      el("allocPct").value = s.allocPct;
+    }
+
+    function updateStockFromForm() {
+      const s = getActiveStock();
+      if (!s) return;
+      s.marketTrend = el("marketTrend").value;
+      s.chartSetup = el("chartSetup").value;
+      s.price = parseFloat(el("price").value) || 0;
+      s.pivotPrice = parseFloat(el("pivotPrice").value) || s.price;
+      s.qEps = parseFloat(el("qEps").value) || 0;
+      s.aEps = parseFloat(el("aEps").value) || 0;
+      s.roe = parseFloat(el("roe").value) || 0;
+      s.volSurge = parseFloat(el("volSurge").value) || 0;
+      s.rsRating = parseFloat(el("rsRating").value) || 50;
+      s.instSponsorship = el("instSponsorship").value;
+      s.allocPct = parseFloat(el("allocPct").value) || 20;
+
+      saveState();
+      renderStockCards();
+      evaluateStock();
+      updatePortfolioAnalysis();
+    }
+
+    document.querySelectorAll("#marketTrend, #chartSetup, #price, #pivotPrice, #qEps, #aEps, #roe, #volSurge, #rsRating, #instSponsorship, #allocPct").forEach((input) => {
+      input.addEventListener("input", updateStockFromForm);
+      input.addEventListener("change", updateStockFromForm);
+    });
+
+    el("removeStockBtn").addEventListener("click", () => {
+      const p = getActivePortfolio();
+      if (!activeTicker) return;
+      p.stocks = p.stocks.filter((s) => s.ticker !== activeTicker);
+      activeTicker = p.stocks[0] ? p.stocks[0].ticker : null;
+      saveState();
+      renderAll();
+      el("statusMsg").textContent = "Stock removed from portfolio.";
+    });
+
+    async function addStockToPortfolio() {
+      const ticker = el("quickTicker").value.trim().toUpperCase();
+      if (!ticker) return;
+      const apiKey = el("finnhubKey").value.trim();
+      const p = getActivePortfolio();
+
+      let stockObj = {
+        ticker,
+        marketTrend: "choppy",
+        chartSetup: "building",
+        price: 100.00,
+        pivotPrice: 105.00,
+        qEps: 30.0,
+        aEps: 25.0,
+        roe: 20.0,
+        volSurge: 15,
+        rsRating: 80,
+        instSponsorship: "strong",
+        allocPct: 20
+      };
+
+      if (!apiKey) {
+        el("statusMsg").textContent = `Added ${ticker} with default placeholder metrics (No Finnhub key provided). Edit metrics below.`;
+      } else {
+        el("statusMsg").textContent = `Fetching live metrics for ${ticker} from Finnhub...`;
+        try {
+          const [quoteRes, metricRes] = await Promise.all([
+            fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${encodeURIComponent(apiKey)}`),
+            fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${encodeURIComponent(apiKey)}`)
+          ]);
+          if (quoteRes.ok && metricRes.ok) {
+            const quote = await quoteRes.json();
+            const metricData = await metricRes.json();
+            const m = metricData.metric || {};
+            if (quote.c && quote.c > 0) stockObj.price = Number(quote.c);
+            if (m["52WeekHigh"]) stockObj.pivotPrice = Number(m["52WeekHigh"]);
+            if (typeof m.epsGrowthQuarterlyYoy === "number") stockObj.qEps = m.epsGrowthQuarterlyYoy;
+            if (typeof m.epsGrowth3Y === "number") stockObj.aEps = m.epsGrowth3Y;
+            if (typeof m.roeTTM === "number") stockObj.roe = m.roeTTM;
+            el("statusMsg").textContent = `Successfully fetched live quote for ${ticker}!`;
+          }
+        } catch (err) {
+          el("statusMsg").textContent = `Finnhub fetch warning (${err.message}). Added ${ticker} with editable baseline values.`;
+        }
+      }
+
+      p.stocks = p.stocks.filter((s) => s.ticker !== ticker);
+      p.stocks.push(stockObj);
+      activeTicker = ticker;
+      el("quickTicker").value = "";
+      saveState();
+      renderAll();
+    }
+
+    el("addStockBtn").addEventListener("click", addStockToPortfolio);
+    el("quickTicker").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addStockToPortfolio();
+    });
+
+    function computeStockSignal(s) {
+      if (!s) return { color: "yellow", title: "NO STOCK SELECTED", score: 0, checks: [] };
+
+      const checks = [
+        { name: "Price Floor (O'Neil >= $15 Institutional Minimum)", status: s.price >= 15 ? "pass" : "fail", detail: `$${s.price.toFixed(2)}` },
+        { name: "C — Current Quarterly EPS Growth (>= 25% YoY)", status: s.qEps >= 25 ? "pass" : (s.qEps >= 12 ? "warn" : "fail"), detail: `${s.qEps.toFixed(1)}%` },
+        { name: "A — Annual 3-Yr EPS (>= 25%) & ROE (>= 17%)", status: (s.aEps >= 25 && s.roe >= 17) ? "pass" : ((s.aEps >= 15 || s.roe >= 17) ? "warn" : "fail"), detail: `EPS ${s.aEps.toFixed(1)}% | ROE ${s.roe.toFixed(1)}%` },
+        { name: "N — Chart Breakout Timing (0% to +5% of Pivot)", status: s.chartSetup === "breakout" ? "pass" : (s.chartSetup === "building" ? "warn" : "fail"), detail: s.chartSetup.toUpperCase() },
+        { name: "S — Breakout Volume Surge (>= +40% vs Avg)", status: s.volSurge >= 40 ? "pass" : (s.volSurge >= 10 ? "warn" : "fail"), detail: `${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%` },
+        { name: "L & I — Leader RS (>= 80) & Institutional Backing", status: (s.rsRating >= 80 && s.instSponsorship === "strong") ? "pass" : (s.rsRating >= 70 ? "warn" : "fail"), detail: `RS ${s.rsRating} | ${s.instSponsorship}` },
+        { name: "M — General Market Direction", status: s.marketTrend === "uptrend" ? "pass" : (s.marketTrend === "choppy" ? "warn" : "fail"), detail: s.marketTrend.toUpperCase() }
+      ];
+
+      let score = 0;
+      checks.forEach((c) => {
+        if (c.status === "pass") score += 14.3;
+        else if (c.status === "warn") score += 7;
+      });
+      score = Math.min(100, Math.round(score));
+
+      let color = "yellow";
+      let title = "YELLOW — WATCHLIST / HOLD & WAIT";
+      let desc = "Solid underlying traits, but either the general market is not in a confirmed uptrend or the stock has not yet flashed a high-volume breakout pivot.";
+
+      const hardRed = s.price < 15 || s.qEps < 10 || s.chartSetup === "downtrend" || s.instSponsorship === "weak";
+      const allGreen = (s.marketTrend === "uptrend" && s.chartSetup === "breakout" && s.price >= 15 && s.qEps >= 25 && s.volSurge >= 40 && s.rsRating >= 80);
+
+      if (hardRed) {
+        color = "red";
+        title = "RED — AVOID / SELL & PROTECT CAPITAL";
+        desc = "Fails core CAN SLIM standards (below $15 institutional floor, weak quarterly earnings growth, or broken downtrend). Do not buy or average down.";
+      } else if (allGreen) {
+        color = "green";
+        title = "GREEN — BUY BREAKOUT (WITH 7.5% STOP)";
+        desc = "Confirmed market uptrend + strong quarterly EPS growth + high-volume breakout near pivot. Enter position and place an immediate -7.5% stop-loss.";
+      } else if (s.marketTrend === "correction") {
+        color = "yellow";
+        title = "YELLOW — MARKET IN CORRECTION (HOLD CASH)";
+        desc = "Even strong leaders fail during market corrections. Keep on watchlist and wait for a market Follow-Through Day.";
+      } else if (s.chartSetup === "extended") {
+        color = "yellow";
+        title = "YELLOW — EXTENDED PAST PIVOT (DO NOT CHASE)";
+        desc = "Stock is more than 5% above its proper buy point. Wait for a constructive pullback or new base before adding shares.";
+      }
+
+      return { color, title, desc, score, checks };
+    }
+
+    function evaluateStock() {
+      const s = getActiveStock();
+      const p = getActivePortfolio();
+      if (!s) {
+        el("scoreBadge").textContent = "Score: -- / 100";
+        el("signalTitle").textContent = "NO STOCK SELECTED";
+        el("signalDesc").textContent = "Add or select a stock from the left portfolio list.";
+        return;
+      }
+
+      const res = computeStockSignal(s);
+      el("scoreBadge").textContent = `CAN SLIM Score: ${res.score} / 100`;
+
+      const banner = el("signalBanner");
+      banner.className = `signal-banner ${res.color}`;
+      el("bulbRed").classList.toggle("lit", res.color === "red");
+      el("bulbYellow").classList.toggle("lit", res.color === "yellow");
+      el("bulbGreen").classList.toggle("lit", res.color === "green");
+      el("signalTitle").textContent = res.title;
+      el("signalDesc").textContent = res.desc;
+
+      const portCapital = p.capital || 50000;
+      const alloc = (s.allocPct || 20) / 100;
+      const dollars = portCapital * alloc;
+      const shares = s.price > 0 ? Math.floor(dollars / s.price) : 0;
+      const actualCost = shares * s.price;
+      const stop = s.price * 0.925;
+      const t20 = s.price * 1.20;
+      const t25 = s.price * 1.25;
+
+      el("posShares").textContent = `${shares} sh ($${actualCost.toLocaleString(undefined, { maximumFractionDigits: 0 })})`;
+      el("stopPrice").textContent = `$${stop.toFixed(2)}`;
+      el("targetPrice").textContent = `$${t20.toFixed(2)} – $${t25.toFixed(2)}`;
+
+      const list = el("checklist");
+      list.innerHTML = "";
+      res.checks.forEach((c) => {
+        const row = document.createElement("div");
+        row.className = "check-item";
+        row.innerHTML = `
+          <span>${c.name}</span>
+          <span class="pill ${c.status}">${c.status.toUpperCase()} (${c.detail})</span>
+        `;
+        list.appendChild(row);
+      });
+
+      updateCharts(s, stop, t20, t25);
+    }
+
+    function updateCharts(s, stop, t20, t25) {
+      const norm = (val, target) => Math.max(0, Math.min(120, Math.round((val / target) * 100)));
+      const radarData = [
+        norm(s.qEps, 25),
+        norm(s.aEps, 25),
+        norm(s.roe, 17),
+        norm(s.volSurge + 50, 90),
+        norm(s.rsRating, 85),
+        s.price >= 15 ? 100 : Math.round((s.price / 15) * 100)
+      ];
+
+      if (radarChartInstance) radarChartInstance.destroy();
+      radarChartInstance = new Chart(el("radarChart"), {
+        type: "radar",
+        data: {
+          labels: ["Qtr EPS (25%+)", "Annual EPS (25%+)", "ROE (17%+)", "Vol Surge (+40%)", "RS Rating (85+)", "Price >= $15"],
+          datasets: [
+            {
+              label: `${s.ticker} vs O'Neil Benchmark (%)`,
+              data: radarData,
+              backgroundColor: "rgba(56, 189, 248, 0.22)",
+              borderColor: "#38bdf8",
+              pointBackgroundColor: "#38bdf8"
+            },
+            {
+              label: "O'Neil Minimum Threshold (100%)",
+              data: [100, 100, 100, 100, 100, 100],
+              backgroundColor: "rgba(16, 185, 129, 0.06)",
+              borderColor: "#10b981",
+              borderDash: [5, 5],
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0, max: 120,
+              ticks: { display: false },
+              grid: { color: "#334155" },
+              angleLines: { color: "#334155" },
+              pointLabels: { color: "#cbd5e1", font: { size: 11 } }
+            }
+          },
+          plugins: { legend: { labels: { color: "#e2e8f0", font: { size: 11 } } } }
+        }
+      });
+
+      if (riskChartInstance) riskChartInstance.destroy();
+      riskChartInstance = new Chart(el("riskChart"), {
+        type: "bar",
+        data: {
+          labels: ["Hard Stop (-7.5%)", "Current Price", "Pivot / High", "Target (+20%)", "Stretch (+25%)"],
+          datasets: [{
+            label: "3:1 Reward-to-Risk Price Levels ($)",
+            data: [stop, s.price, s.pivotPrice, t20, t25].map((v) => Number(v.toFixed(2))),
+            backgroundColor: ["#ef4444", "#38bdf8", "#f59e0b", "#10b981", "#059669"],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: "#334155" }, ticks: { color: "#cbd5e1" } },
+            y: { grid: { display: false }, ticks: { color: "#cbd5e1", font: { size: 11 } } }
+          },
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: `O'Neil Price & Risk Map for ${s.ticker} ($)`, color: "#e2e8f0", font: { size: 12 } }
+          }
+        }
+      });
+    }
+
+    function updatePortfolioAnalysis() {
+      const p = getActivePortfolio();
+      if (!p || !p.stocks || p.stocks.length === 0) {
+        el("portfolioScoreBadge").textContent = "Overall Health: No Stocks";
+        el("portfolioScoreBadge").style.color = "var(--muted)";
+        el("portAvgQeps").textContent = "0%";
+        el("portAvgRoe").textContent = "0%";
+        el("portAvgRs").textContent = "0";
+        el("portAllocatedCapital").textContent = `$0 / $${(p ? p.capital : 50000).toLocaleString()}`;
+        el("portTotalRisk").textContent = "$0";
+        el("portAnalysisSummary").textContent = "This portfolio currently has no open positions or watchlisted stocks. Add stocks to generate portfolio-wide CAN SLIM metrics.";
+        return;
+      }
+
+      let totalQeps = 0;
+      let totalRoe = 0;
+      let totalRs = 0;
+      let totalAllocPct = 0;
+      let totalMaxLoss = 0;
+
+      p.stocks.forEach(s => {
+        totalQeps += s.qEps;
+        totalRoe += s.roe;
+        totalRs += s.rsRating;
+        totalAllocPct += (s.allocPct || 20);
+        
+        const posDollars = p.capital * ((s.allocPct || 20) / 100);
+        const maxLoss = posDollars * 0.075;
+        totalMaxLoss += maxLoss;
+      });
+
+      const count = p.stocks.length;
+      const avgQeps = totalQeps / count;
+      const avgRoe = totalRoe / count;
+      const avgRs = totalRs / count;
+
+      el("portAvgQeps").textContent = `${avgQeps >= 0 ? '+' : ''}${avgQeps.toFixed(1)}%`;
+      el("portAvgQeps").style.color = avgQeps >= 25 ? 'var(--green)' : (avgQeps >= 15 ? 'var(--yellow)' : 'var(--red)');
+
+      el("portAvgRoe").textContent = `${avgRoe.toFixed(1)}%`;
+      el("portAvgRoe").style.color = avgRoe >= 17 ? 'var(--green)' : 'var(--yellow)';
+
+      el("portAvgRs").textContent = avgRs.toFixed(0);
+      el("portAvgRs").style.color = avgRs >= 80 ? 'var(--green)' : (avgRs >= 70 ? 'var(--yellow)' : 'var(--red)');
+
+      const allocatedDollars = (p.capital * totalAllocPct) / 100;
+      el("portAllocatedCapital").textContent = `$${allocatedDollars.toLocaleString(undefined, {maximumFractionDigits:0})} / $${p.capital.toLocaleString()}`;
+      el("portTotalRisk").textContent = `-$${totalMaxLoss.toLocaleString(undefined, {maximumFractionDigits:0})} (${(totalMaxLoss / p.capital * 100).toFixed(1)}% capital)`;
+
+      let healthScore = 0;
+      if (avgQeps >= 25) healthScore += 35;
+      else if (avgQeps >= 15) healthScore += 20;
+
+      if (avgRoe >= 17) healthScore += 25;
+      else if (avgRoe >= 12) healthScore += 15;
+
+      if (avgRs >= 80) healthScore += 30;
+      else if (avgRs >= 70) healthScore += 15;
+
+      if (count >= 4 && count <= 8) healthScore += 10;
+      else if (count > 8) healthScore -= 10;
+
+      healthScore = Math.min(100, Math.max(0, healthScore));
+
+      let grade = "A+ (Prime O'Neil Leadership)";
+      let colorStyle = "var(--green)";
+      if (healthScore < 50) { grade = "C (High Risk / Sub-Leader Profile)"; colorStyle = "var(--red)"; }
+      else if (healthScore < 75) { grade = "B (Moderate Growth / Needs Filtering)"; colorStyle = "var(--yellow)"; }
+
+      el("portfolioScoreBadge").textContent = `Overall Health: ${grade} (${healthScore}/100)`;
+      el("portfolioScoreBadge").style.color = colorStyle;
+
+      let summaryText = `Portfolio "${p.name}" holds ${count} active stock(s) with an average quarterly EPS growth of ${avgQeps.toFixed(1)}% and an average RS rating of ${avgRs.toFixed(0)}. `;
+      if (count < 4) {
+        summaryText += `O'Neil recommends holding 4 to 8 leading growth stocks to balance high return potential with adequate risk dispersion; you currently have ${count} stock(s). `;
+      } else if (count > 8) {
+        summaryText += `Warning: Holding ${count} stocks exceeds O'Neil's recommended maximum of 6-8 positions, which can dilute top winners. `;
+      }
+      if (avgRs >= 80 && avgQeps >= 25) {
+        summaryText += `The portfolio exhibits strong institutional leadership characteristics aligned with CAN SLIM criteria. Ensure strict adherence to 7.5% stop-losses.`;
+      } else {
+        summaryText += `Some metrics fall below O'Neil's prime growth thresholds (EPS >= 25%, RS >= 80). Review individual stock scores to optimize leader quality.`;
+      }
+      el("portAnalysisSummary").textContent = summaryText;
+    }
+
+    function renderAll() {
+      renderTabs();
+      renderStockCards();
+      const s = getActiveStock();
+      loadStockIntoForm(s);
+      evaluateStock();
+      updatePortfolioAnalysis();
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>
