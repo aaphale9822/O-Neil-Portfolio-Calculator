@@ -1,22 +1,18 @@
-# CAN SLIM Stock Analyzer & Portfolio Signal Calculator
+# CAN SLIM Multi-Portfolio Stock Analyzer & Signal Calculator
 
-An interactive, single-page stock screening and risk-management calculator modeled on **William J. O'Neil's** *The Successful Investor* and the **CAN SLIM** investment system.
+An advanced single-page stock screening and risk-management web application modeled on **William J. O'Neil's** *The Successful Investor* and the **CAN SLIM** investment system, upgraded with **multi-portfolio management**.
 
-## Features
+## Key Features
 
-- **Traffic-Light Buy/Sell/Wait Engine (Green / Yellow / Red):** Automatically evaluates market direction (`M`), quarterly & annual earnings growth (`C` & `A`), chart breakout timing (`N`), volume surges (`S`), relative strength (`L`), and institutional sponsorship (`I`).
-- **Live Stock Quote Integration (Finnhub.io):** Enter any US stock ticker (`NVDA`, `MSFT`, `J`, `AAPL`, etc.) along with a free [Finnhub.io](https://finnhub.io) API key to pull live prices, 52-week highs, quarterly/annual EPS growth, and Return on Equity (ROE).
-- **Automated 3:1 Risk-Reward Position Sizing:** Calculates exact share count, your mandatory **-7.5% hard stop-loss**, and your **+20% to +25% profit-taking zone**.
-- **Interactive Visualizations:** Includes a **CAN SLIM Benchmark Radar Chart** and a **Price & Risk-Reward Map** powered by Chart.js.
-- **Persistent Custom Watchlist:** Save custom tickers directly to your browser's `localStorage`.
+- **Multiple Portfolios:** Create, rename, switch between, and delete multiple independent portfolios (e.g., *Tech Growth Watchlist*, *Long-Term Dividend Core*, *Speculative Plays*), each with its own total capital pool.
+- **Dynamic Stock Management per Portfolio:** Add any US stock ticker to your active portfolio, with automated live quote fetching via a free **Finnhub.io** API key.
+- **Traffic-Light Signal Engine (Green / Yellow / Red):** Automatically evaluates CAN SLIM rules (`M`, `C`, `A`, `N`, `S`, `L`, `I`) for whichever stock you select in your portfolio list.
+- **Automated Risk & Position Sizing:** Calculates exact share allocation based on your portfolio capital and target position weight, alongside your **-7.5% hard stop-loss** and **+20% to +25% profit targets**.
+- **Dual Interactive Charts:** Instant radar chart benchmark comparison and 3:1 reward-to-risk price map powered by Chart.js.
+- **Persistent Local Storage:** All portfolios and custom tickers are automatically saved in your browser's `localStorage`.
 
 ## Quick Start (GitHub Pages)
 
-1. Upload `index.html` and `README.md` to a new GitHub repository.
-2. Go to **Settings -> Pages** in your repository.
-3. Under **Build and deployment**, select **Deploy from a branch**, choose `main` (or `master`) and `/ (root)`, and click **Save**.
-4. Open your live GitHub Pages URL and paste your free Finnhub API key into the top bar to fetch live US equity quotes.
-
-## Disclaimer
-
-This tool is provided for educational and informational purposes only and does not constitute financial or investment advice.
+1. Upload `index.html` and `README.md` to your GitHub repository.
+2. Go to **Settings -> Pages** and enable GitHub Pages on the `main` branch.
+3. Open your live URL and paste your free [Finnhub.io](https://finnhub.io) API key at the top to fetch live US equity quotes.
