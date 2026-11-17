@@ -373,6 +373,45 @@
       </div>
     </div>
 
+
+      <!-- Portfolio-Wide Aggregated Analysis Card -->
+      <div class="card" style="margin-top: 20px; grid-column: 1 / -1;">
+        <h2>
+          <span>CAN SLIM Portfolio-Wide Analysis & Health Score</span>
+          <span id="portfolioScoreBadge" style="font-size:0.85rem; color:var(--accent);">Overall Health: --</span>
+        </h2>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px;">
+          <div class="metric-box">
+            <span>Avg. Quarterly EPS Growth</span>
+            <strong id="portAvgQeps">--%</strong>
+          </div>
+          <div class="metric-box">
+            <span>Avg. Return on Equity (ROE)</span>
+            <strong id="portAvgRoe">--%</strong>
+          </div>
+          <div class="metric-box">
+            <span>Avg. Relative Strength (RS)</span>
+            <strong id="portAvgRs">--</strong>
+          </div>
+          <div class="metric-box">
+            <span>Total Capital Allocated</span>
+            <strong id="portAllocatedCapital">$0 / $0</strong>
+          </div>
+          <div class="metric-box">
+            <span>Portfolio Risk Exposure (-7.5%)</span>
+            <strong id="portTotalRisk" style="color:var(--red);">$0.00</strong>
+          </div>
+        </div>
+
+        <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 14px;">
+          <strong style="font-size: 0.9rem; color: var(--accent); display: block; margin-bottom: 6px;">Portfolio Structure & O'Neil Compliance Review:</strong>
+          <p id="portAnalysisSummary" style="font-size: 0.86rem; color: var(--muted); line-height: 1.5;">
+            Select or populate a portfolio to analyze aggregate growth momentum, sector concentration, and risk exposure.
+          </p>
+        </div>
+      </div>
+
     <footer>
       CAN SLIM Multi-Portfolio Analyzer &bull; Inspired by <em>The Successful Investor</em> by William J. O&rsquo;Neil. Not financial advice.
     </footer>
@@ -875,12 +914,100 @@
       });
     }
 
+
+    function updatePortfolioAnalysis() {
+      const p = getActivePortfolio();
+      if (!p || !p.stocks || p.stocks.length === 0) {
+        el("portfolioScoreBadge").textContent = "Overall Health: No Stocks";
+        el("portAvgQeps").textContent = "0%";
+        el("portAvgRoe").textContent = "0%";
+        el("portAvgRs").textContent = "0";
+        el("portAllocatedCapital").textContent = `$0 / $${(p ? p.capital : 50000).toLocaleString()}`;
+        el("portTotalRisk").textContent = "$0";
+        el("portAnalysisSummary").textContent = "This portfolio currently has no open positions or watchlisted stocks. Add stocks to generate portfolio-wide CAN SLIM metrics.";
+        return;
+      }
+
+      let totalQeps = 0;
+      let totalRoe = 0;
+      let totalRs = 0;
+      let totalAllocPct = 0;
+      let totalMaxLoss = 0;
+
+      p.stocks.forEach(s => {
+        totalQeps += s.qEps;
+        totalRoe += s.roe;
+        totalRs += s.rsRating;
+        totalAllocPct += (s.allocPct || 20);
+        
+        const posDollars = p.capital * ((s.allocPct || 20) / 100);
+        const maxLoss = posDollars * 0.075; // 7.5% stop loss risk
+        totalMaxLoss += maxLoss;
+      });
+
+      const count = p.stocks.length;
+      const avgQeps = totalQeps / count;
+      const avgRoe = totalRoe / count;
+      const avgRs = totalRs / count;
+
+      el("portAvgQeps").textContent = `${avgQeps >= 0 ? '+' : ''}${avgQeps.toFixed(1)}%`;
+      el("portAvgQeps").style.color = avgQeps >= 25 ? 'var(--green)' : (avgQeps >= 15 ? 'var(--yellow)' : 'var(--red)');
+
+      el("portAvgRoe").textContent = `${avgRoe.toFixed(1)}%`;
+      el("portAvgRoe").style.color = avgRoe >= 17 ? 'var(--green)' : 'var(--yellow)';
+
+      el("portAvgRs").textContent = avgRs.toFixed(0);
+      el("portAvgRs").style.color = avgRs >= 80 ? 'var(--green)' : (avgRs >= 70 ? 'var(--yellow)' : 'var(--red)');
+
+      const allocatedDollars = (p.capital * totalAllocPct) / 100;
+      el("portAllocatedCapital").textContent = `$${allocatedDollars.toLocaleString(undefined, {maximumFractionDigits:0})} / $${p.capital.toLocaleString()}`;
+      el("portTotalRisk").textContent = `-$${totalMaxLoss.toLocaleString(undefined, {maximumFractionDigits:0})} (${(totalMaxLoss / p.capital * 100).toFixed(1)}% capital)`;
+
+      // Overall health score calculation
+      let healthScore = 0;
+      if (avgQeps >= 25) healthScore += 35;
+      else if (avgQeps >= 15) healthScore += 20;
+
+      if (avgRoe >= 17) healthScore += 25;
+      else if (avgRoe >= 12) healthScore += 15;
+
+      if (avgRs >= 80) healthScore += 30;
+      else if (avgRs >= 70) healthScore += 15;
+
+      if (count >= 4 && count <= 8) healthScore += 10; // optimal O'Neil diversification (4-8 stocks)
+      else if (count > 8) healthScore -= 10; // over-diversified
+
+      healthScore = Math.min(100, Math.max(0, healthScore));
+
+      let grade = "A+ (Prime O'Neil Leadership)";
+      let colorStyle = "var(--green)";
+      if (healthScore < 50) { grade = "C (High Risk / Sub-Leader Profile)"; colorStyle = "var(--red)"; }
+      else if (healthScore < 75) { grade = "B (Moderate Growth / Needs Filtering)"; colorStyle = "var(--yellow)"; }
+
+      el("portfolioScoreBadge.textContent = `Overall Health: ${grade} (${healthScore}/100)`;".replace(".", " = ") // fix syntax
+      el("portfolioScoreBadge").style.color = colorStyle;
+
+      let summaryText = `Portfolio "${p.name}" holds ${count} active stock(s) with an average quarterly EPS growth of ${avgQeps.toFixed(1)}% and an average RS rating of ${avgRs.toFixed(0)}. `;
+      if (count < 4) {
+        summaryText += `O'Neil recommends holding 4 to 8 leading growth stocks to balance high return potential with adequate risk dispersion; you currently have ${count} stock(s). `;
+      } else if (count > 8) {
+        summaryText += `Warning: Holding ${count} stocks exceeds O'Neil's recommended maximum of 6-8 positions, which can dilute top winners. `;
+      }
+      if (avgRs >= 80 && avgQeps >= 25) {
+        summaryText += `The portfolio exhibits strong institutional leadership characteristics aligned with CAN SLIM criteria. Ensure strict adherence to 7.5% stop-losses.`;
+      } else {
+        summaryText += `Some metrics fall below O'Neil's prime growth thresholds (EPS >= 25%, RS >= 80). Review individual stock scores to optimize leader quality.`;
+      }
+      el("portAnalysisSummary").textContent = summaryText;
+    }
+
     function renderAll() {
       renderTabs();
       renderStockCards();
       const s = getActiveStock();
       loadStockIntoForm(s);
       evaluateStock();
+      updatePortfolioAnalysis();
     }
 
     renderAll();
