@@ -211,8 +211,12 @@
           <button class="btn" id="createPortfolioBtn" type="button">+ Add</button>
         </div>
       </div>
-      <div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-danger" id="deletePortfolioBtn" type="button" title="Delete current portfolio">Delete Portfolio</button>
+        <button class="btn btn-secondary" id="exportBtn" type="button" title="Export portfolios to JSON file">Export Data</button>
+        <label class="btn btn-secondary" style="cursor:pointer; margin-bottom:0; display:inline-flex; align-items:center;">
+          Import Data <input type="file" id="importFile" accept=".json" style="display:none;" />
+        </label>
       </div>
       <div class="status-msg" id="statusMsg">Ready. Switch or create portfolios below, add stocks, and fetch live quotes.</div>
     </div>
@@ -414,6 +418,45 @@
     function saveState() {
       localStorage.setItem("canslim_portfolios_v2", JSON.stringify(portfolios));
     }
+
+    // Export portfolios to JSON file
+    el("exportBtn").addEventListener("click", () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(portfolios, null, 2));
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "canslim_portfolios_backup.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      el("statusMsg").textContent = "Portfolios exported successfully to JSON backup.";
+    });
+
+    // Import portfolios from JSON file
+    el("importFile").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (Array.isArray(imported) && imported.length > 0) {
+            portfolios = imported;
+            activePortfolioId = portfolios[0].id;
+            activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
+            saveState();
+            renderAll();
+            el("statusMsg").textContent = "Portfolios imported successfully!";
+          } else {
+            alert("Invalid portfolio file format.");
+          }
+        } catch (err) {
+          alert("Error parsing JSON file: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+      // Reset file input so same file can be selected again if needed
+      event.target.value = "";
+    });
 
     function getActivePortfolio() {
       return portfolios.find((p) => p.id === activePortfolioId) || portfolios[0];
