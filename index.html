@@ -373,44 +373,43 @@
       </div>
     </div>
 
-
-      <!-- Portfolio-Wide Aggregated Analysis Card -->
-      <div class="card" style="margin-top: 20px; grid-column: 1 / -1;">
-        <h2>
-          <span>CAN SLIM Portfolio-Wide Analysis & Health Score</span>
-          <span id="portfolioScoreBadge" style="font-size:0.85rem; color:var(--accent);">Overall Health: --</span>
-        </h2>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px;">
-          <div class="metric-box">
-            <span>Avg. Quarterly EPS Growth</span>
-            <strong id="portAvgQeps">--%</strong>
-          </div>
-          <div class="metric-box">
-            <span>Avg. Return on Equity (ROE)</span>
-            <strong id="portAvgRoe">--%</strong>
-          </div>
-          <div class="metric-box">
-            <span>Avg. Relative Strength (RS)</span>
-            <strong id="portAvgRs">--</strong>
-          </div>
-          <div class="metric-box">
-            <span>Total Capital Allocated</span>
-            <strong id="portAllocatedCapital">$0 / $0</strong>
-          </div>
-          <div class="metric-box">
-            <span>Portfolio Risk Exposure (-7.5%)</span>
-            <strong id="portTotalRisk" style="color:var(--red);">$0.00</strong>
-          </div>
+    <!-- Portfolio-Wide Aggregated Analysis Card -->
+    <div class="card" style="margin-top: 20px; grid-column: 1 / -1;">
+      <h2>
+        <span>CAN SLIM Portfolio-Wide Analysis &amp; Health Score</span>
+        <span id="portfolioScoreBadge" style="font-size:0.85rem; color:var(--accent);">Overall Health: --</span>
+      </h2>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px;">
+        <div class="metric-box">
+          <span>Avg. Quarterly EPS Growth</span>
+          <strong id="portAvgQeps">--%</strong>
         </div>
-
-        <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 14px;">
-          <strong style="font-size: 0.9rem; color: var(--accent); display: block; margin-bottom: 6px;">Portfolio Structure & O'Neil Compliance Review:</strong>
-          <p id="portAnalysisSummary" style="font-size: 0.86rem; color: var(--muted); line-height: 1.5;">
-            Select or populate a portfolio to analyze aggregate growth momentum, sector concentration, and risk exposure.
-          </p>
+        <div class="metric-box">
+          <span>Avg. Return on Equity (ROE)</span>
+          <strong id="portAvgRoe">--%</strong>
+        </div>
+        <div class="metric-box">
+          <span>Avg. Relative Strength (RS)</span>
+          <strong id="portAvgRs">--</strong>
+        </div>
+        <div class="metric-box">
+          <span>Total Capital Allocated</span>
+          <strong id="portAllocatedCapital">$0 / $0</strong>
+        </div>
+        <div class="metric-box">
+          <span>Portfolio Risk Exposure (-7.5%)</span>
+          <strong id="portTotalRisk" style="color:var(--red);">$0.00</strong>
         </div>
       </div>
+
+      <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 14px;">
+        <strong style="font-size: 0.9rem; color: var(--accent); display: block; margin-bottom: 6px;">Portfolio Structure &amp; O'Neil Compliance Review:</strong>
+        <p id="portAnalysisSummary" style="font-size: 0.86rem; color: var(--muted); line-height: 1.5;">
+          Select or populate a portfolio to analyze aggregate growth momentum, sector concentration, and risk exposure.
+        </p>
+      </div>
+    </div>
 
     <footer>
       CAN SLIM Multi-Portfolio Analyzer &bull; Inspired by <em>The Successful Investor</em> by William J. O&rsquo;Neil. Not financial advice.
@@ -470,30 +469,41 @@
       el("statusMsg").textContent = "Portfolios exported successfully to JSON backup.";
     });
 
-    // Import portfolios from JSON file
+    // Import portfolios from JSON file (Enhanced for robust parsing)
     el("importFile").addEventListener("change", (event) => {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
         try {
-          const imported = JSON.parse(e.target.result);
+          let imported = JSON.parse(e.target.result);
+          
+          // Normalize: if user imported a single portfolio object instead of an array of portfolios
+          if (imported && !Array.isArray(imported) && imported.id) {
+            imported = [imported];
+          }
+
           if (Array.isArray(imported) && imported.length > 0) {
-            portfolios = imported;
+            portfolios = imported.map(p => ({
+              id: p.id || "port-" + Math.random().toString(36).substring(2, 9),
+              name: p.name || "Imported Portfolio",
+              capital: Number(p.capital) || 50000,
+              stocks: Array.isArray(p.stocks) ? p.stocks : []
+            }));
+
             activePortfolioId = portfolios[0].id;
             activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
             saveState();
             renderAll();
             el("statusMsg").textContent = "Portfolios imported successfully!";
           } else {
-            alert("Invalid portfolio file format.");
+            alert("Invalid portfolio file format. Expected a JSON array of portfolios.");
           }
         } catch (err) {
           alert("Error parsing JSON file: " + err.message);
         }
       };
       reader.readAsText(file);
-      // Reset file input so same file can be selected again if needed
       event.target.value = "";
     });
 
@@ -658,6 +668,7 @@
       saveState();
       renderStockCards();
       evaluateStock();
+      updatePortfolioAnalysis();
     }
 
     document.querySelectorAll("#marketTrend, #chartSetup, #price, #pivotPrice, #qEps, #aEps, #roe, #volSurge, #rsRating, #instSponsorship, #allocPct").forEach((input) => {
@@ -914,7 +925,6 @@
       });
     }
 
-
     function updatePortfolioAnalysis() {
       const p = getActivePortfolio();
       if (!p || !p.stocks || p.stocks.length === 0) {
@@ -984,7 +994,7 @@
       if (healthScore < 50) { grade = "C (High Risk / Sub-Leader Profile)"; colorStyle = "var(--red)"; }
       else if (healthScore < 75) { grade = "B (Moderate Growth / Needs Filtering)"; colorStyle = "var(--yellow)"; }
 
-      el("portfolioScoreBadge.textContent = `Overall Health: ${grade} (${healthScore}/100)`;".replace(".", " = ") // fix syntax
+      el("portfolioScoreBadge").textContent = `Overall Health: ${grade} (${healthScore}/100)`;
       el("portfolioScoreBadge").style.color = colorStyle;
 
       let summaryText = `Portfolio "${p.name}" holds ${count} active stock(s) with an average quarterly EPS growth of ${avgQeps.toFixed(1)}% and an average RS rating of ${avgRs.toFixed(0)}. `;
