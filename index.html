@@ -66,7 +66,8 @@
     .btn-secondary { background: #334155; color: var(--text); border: 1px solid #475569; }
     .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--red); border: 1px solid var(--red); }
     .status-msg {
-      grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); min-height: 18px;
+      grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); min-height: 20px;
+      background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
     }
 
     /* Tabs Bar for Portfolios */
@@ -199,9 +200,9 @@
     <header>
       <div>
         <h1>CAN SLIM Multi-Portfolio Analyzer &amp; Signal Calculator</h1>
-        <p>Automated quote, fundamental, volume &amp; RS estimation via Finnhub with manual override controls</p>
+        <p>Automated quote, fundamental, volume &amp; RS estimation via Finnhub with transparent sync diagnostics</p>
       </div>
-      <div class="badge-book">Auto-Sync Finnhub Engine &bull; Manual Override Supported</div>
+      <div class="badge-book">Auto-Sync Finnhub Engine &bull; Diagnostic Status</div>
     </header>
 
     <!-- Global API & Controls Bar -->
@@ -229,7 +230,7 @@
           Import Data <input type="file" id="importFile" accept=".json" style="display:none;" />
         </label>
       </div>
-      <div class="status-msg" id="statusMsg">Ready. Add a ticker to auto-pull price, 52-week high/pivot, EPS, ROE, volume surge vs. average, and RS estimate.</div>
+      <div class="status-msg" id="statusMsg">Ready. Paste your Finnhub API key above and click "Fetch &amp; Add" or "Sync Selected Ticker" to see exact endpoint responses.</div>
     </div>
 
     <!-- Portfolio Tabs Bar -->
@@ -250,7 +251,7 @@
             <input type="text" id="quickTicker" placeholder="e.g. MSFT, TSM, J, NVDA" style="text-transform:uppercase;" />
             <button class="btn" id="addStockBtn" type="button">Fetch &amp; Add</button>
           </div>
-          <div class="helper-note">Auto-populates Price, 52-Wk High Pivot, Qtr/Annual EPS, ROE, Volume Surge % (from daily candles), and estimated RS (from 6-mo price performance).</div>
+          <div class="helper-note">Calls Finnhub <code>/quote</code>, <code>/stock/metric</code>, and <code>/stock/candle</code>. Note: Free Finnhub keys may return HTTP 403 on <code>/stock/candle</code>—when that happens, Volume Surge and RS stay editable manually.</div>
         </div>
 
         <div class="stock-list-header">
@@ -317,13 +318,13 @@
             <div class="field-group">
               <label for="volSurge">S &mdash; Breakout Volume vs Avg (%)</label>
               <input type="number" id="volSurge" step="0.1" value="0" />
-              <div class="helper-note">Calculated from latest daily candle volume vs. prior ~30-day average when candle data is available.</div>
+              <div class="helper-note">Auto-calculated when daily candles are allowed by your Finnhub plan; otherwise enter manually.</div>
             </div>
 
             <div class="field-group">
               <label for="rsRating">L &mdash; Relative Strength Rating (1&ndash;99)</label>
               <input type="number" id="rsRating" min="1" max="99" value="50" />
-              <div class="helper-note">Estimated from ~6-month price trajectory when available; edit manually if desired.</div>
+              <div class="helper-note">Estimated from ~6-month price trajectory when daily candles are available; otherwise edit manually.</div>
             </div>
 
             <div class="field-group">
@@ -691,7 +692,18 @@
       return "building";
     }
 
-    // Fetch live quote, fundamentals, candle volume surge, and ~6-month RS estimate
+    async function safeFetchJson(url) {
+      const res = await fetch(url);
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch {
+        payload = null;
+      }
+      return { ok: res.ok, status: res.status, data: payload };
+    }
+
+    // Fetch live quote, fundamentals, candle volume surge, and ~6-month RS estimate with clear diagnostics
     async function fetchStockDataFromFinnhub(ticker, apiKey, existingStock = null) {
       const base = existingStock ? { ...existingStock, ticker } : {
         ticker,
@@ -712,79 +724,90 @@
       const sixMonthsAgoSec = nowSec - (200 * 24 * 60 * 60);
 
       const [quoteRes, metricRes, candleRes] = await Promise.all([
-        fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${encodeURIComponent(apiKey)}`),
-        fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${encodeURIComponent(apiKey)}`),
-        fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(ticker)}&resolution=D&from=${sixMonthsAgoSec}&to=${nowSec}&token=${encodeURIComponent(apiKey)}`)
+        safeFetchJson(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${encodeURIComponent(apiKey)}`),
+        safeFetchJson(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${encodeURIComponent(apiKey)}`),
+        safeFetchJson(`https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(ticker)}&resolution=D&from=${sixMonthsAgoSec}&to=${nowSec}&token=${encodeURIComponent(apiKey)}`)
       ]);
 
-      let fetchedCount = 0;
+      const updatedFields = [];
+      const diagnostics = [];
 
-      if (quoteRes.ok) {
-        const quote = await quoteRes.json();
-        if (quote && typeof quote.c === "number" && quote.c > 0) {
-          base.price = Number(quote.c.toFixed(2));
-          fetchedCount++;
-        }
+      if (quoteRes.ok && quoteRes.data && typeof quoteRes.data.c === "number" && quoteRes.data.c > 0) {
+        base.price = Number(quoteRes.data.c.toFixed(2));
+        updatedFields.push("Price");
+      } else {
+        diagnostics.push(`Quote HTTP ${quoteRes.status}`);
       }
 
-      if (metricRes.ok) {
-        const metricData = await metricRes.json();
-        const m = metricData.metric || {};
+      if (metricRes.ok && metricRes.data && metricRes.data.metric) {
+        const m = metricRes.data.metric;
         if (typeof m["52WeekHigh"] === "number" && m["52WeekHigh"] > 0) {
           base.pivotPrice = Number(m["52WeekHigh"].toFixed(2));
-          fetchedCount++;
+          updatedFields.push("52-Wk High");
         }
         const qGrowth = m.epsGrowthQuarterlyYoy ?? m.quarterlyEarningsGrowthYoy ?? m.epsGrowthTTMYoy;
         if (typeof qGrowth === "number" && Number.isFinite(qGrowth)) {
           base.qEps = Number(qGrowth.toFixed(2));
-          fetchedCount++;
+          updatedFields.push("Qtr EPS");
         }
         const aGrowth = m.epsGrowth3Y ?? m.epsGrowth5Y ?? m.epsGrowthAnnual;
         if (typeof aGrowth === "number" && Number.isFinite(aGrowth)) {
           base.aEps = Number(aGrowth.toFixed(2));
-          fetchedCount++;
+          updatedFields.push("3-Yr EPS");
         }
         const roeVal = m.roeTTM ?? m.roeRfy;
         if (typeof roeVal === "number" && Number.isFinite(roeVal)) {
           base.roe = Number(roeVal.toFixed(2));
-          fetchedCount++;
+          updatedFields.push("ROE");
         }
+      } else {
+        diagnostics.push(`Metric HTTP ${metricRes.status}`);
       }
 
-      // Compute volume surge vs prior 30-day average and rough RS from daily candles when accessible
-      if (candleRes.ok) {
-        const candles = await candleRes.json();
-        if (candles && candles.s === "ok" && Array.isArray(candles.v) && candles.v.length >= 5) {
-          const vols = candles.v;
-          const latestVol = vols[vols.length - 1];
-          const lookbackSlice = vols.slice(Math.max(0, vols.length - 31), vols.length - 1);
-          if (lookbackSlice.length > 0) {
-            const avgVol = lookbackSlice.reduce((acc, v) => acc + v, 0) / lookbackSlice.length;
-            if (avgVol > 0 && typeof latestVol === "number") {
-              const surgePct = ((latestVol - avgVol) / avgVol) * 100;
-              base.volSurge = Number(surgePct.toFixed(1));
-              fetchedCount++;
-            }
-          }
-
-          if (Array.isArray(candles.c) && candles.c.length >= 20) {
-            const closes = candles.c;
-            const startIdx = Math.max(0, closes.length - 126); // ~6 trading months
-            const startPrice = closes[startIdx];
-            const endPrice = closes[closes.length - 1];
-            if (startPrice > 0 && endPrice > 0) {
-              const sixMoReturnPct = ((endPrice - startPrice) / startPrice) * 100;
-              // Map roughly -25%..+60% 6-month move into a 1..99 RS estimate
-              const estRs = Math.max(1, Math.min(99, Math.round(50 + sixMoReturnPct * 1.1)));
-              base.rsRating = estRs;
-              fetchedCount++;
-            }
+      if (candleRes.ok && candleRes.data && candleRes.data.s === "ok" && Array.isArray(candleRes.data.v) && candleRes.data.v.length >= 5) {
+        const vols = candleRes.data.v;
+        const latestVol = vols[vols.length - 1];
+        const lookbackSlice = vols.slice(Math.max(0, vols.length - 31), vols.length - 1);
+        if (lookbackSlice.length > 0) {
+          const avgVol = lookbackSlice.reduce((acc, v) => acc + v, 0) / lookbackSlice.length;
+          if (avgVol > 0 && typeof latestVol === "number") {
+            const surgePct = ((latestVol - avgVol) / avgVol) * 100;
+            base.volSurge = Number(surgePct.toFixed(1));
+            updatedFields.push("Vol Surge");
           }
         }
+
+        if (Array.isArray(candleRes.data.c) && candleRes.data.c.length >= 20) {
+          const closes = candleRes.data.c;
+          const startIdx = Math.max(0, closes.length - 126);
+          const startPrice = closes[startIdx];
+          const endPrice = closes[closes.length - 1];
+          if (startPrice > 0 && endPrice > 0) {
+            const sixMoReturnPct = ((endPrice - startPrice) / startPrice) * 100;
+            const estRs = Math.max(1, Math.min(99, Math.round(50 + sixMoReturnPct * 1.1)));
+            base.rsRating = estRs;
+            updatedFields.push("RS Est.");
+          }
+        }
+      } else {
+        diagnostics.push(`Candle HTTP ${candleRes.status} (manual Vol/RS kept)`);
       }
 
       base.chartSetup = suggestChartSetup(base.price, base.pivotPrice);
-      return { stockObj: base, fetchedCount };
+      return {
+        stockObj: base,
+        fetchedCount: updatedFields.length,
+        updatedFields,
+        diagnostics
+      };
+    }
+
+    function formatSyncStatus(ticker, result) {
+      const pulledText = result.updatedFields.length
+        ? `Updated [${result.updatedFields.join(", ")}]`
+        : "No new API fields returned";
+      const diagText = result.diagnostics.length ? ` | Note: ${result.diagnostics.join(", ")}` : "";
+      return `${ticker}: ${pulledText}.${diagText}`;
     }
 
     async function addStockToPortfolio() {
@@ -808,16 +831,16 @@
         allocPct: 20
       };
 
-      if (!apiKey) {
-        el("statusMsg").textContent = `Added ${ticker} with baseline values (no Finnhub API key entered). Paste a key above for automatic data pulls.`;
-      } else {
+      let statusText = `Added ${ticker} with baseline values (no Finnhub API key entered).`;
+
+      if (apiKey) {
         el("statusMsg").textContent = `Auto-fetching quote, fundamentals, volume surge, and RS estimate for ${ticker}...`;
         try {
           const result = await fetchStockDataFromFinnhub(ticker, apiKey);
           stockObj = result.stockObj;
-          el("statusMsg").textContent = `Synced ${ticker} (${result.fetchedCount} automated data points pulled). You can manually adjust any field below.`;
+          statusText = formatSyncStatus(ticker, result);
         } catch (err) {
-          el("statusMsg").textContent = `Finnhub fetch issue for ${ticker} (${err.message}). Added with baseline values for manual editing.`;
+          statusText = `Finnhub network error for ${ticker}: ${err.message}. Added with baseline values.`;
         }
       }
 
@@ -827,6 +850,7 @@
       el("quickTicker").value = "";
       saveState();
       renderAll();
+      el("statusMsg").textContent = statusText;
     }
 
     el("refreshSelectedBtn").addEventListener("click", async () => {
@@ -844,7 +868,7 @@
         p.stocks = p.stocks.map((item) => item.ticker === s.ticker ? result.stockObj : item);
         saveState();
         renderAll();
-        el("statusMsg").textContent = `Updated ${s.ticker} (${result.fetchedCount} automated metrics refreshed).`;
+        el("statusMsg").textContent = formatSyncStatus(s.ticker, result);
       } catch (err) {
         el("statusMsg").textContent = `Could not refresh ${s.ticker}: ${err.message}`;
       }
@@ -860,10 +884,12 @@
       }
       el("statusMsg").textContent = `Refreshing ${p.stocks.length} stock(s) in "${p.name}"...`;
       const updated = [];
+      let totalPulled = 0;
       for (const item of p.stocks) {
         try {
           const res = await fetchStockDataFromFinnhub(item.ticker, apiKey, item);
           updated.push(res.stockObj);
+          totalPulled += res.fetchedCount;
         } catch {
           updated.push(item);
         }
@@ -871,7 +897,7 @@
       p.stocks = updated;
       saveState();
       renderAll();
-      el("statusMsg").textContent = `Portfolio "${p.name}" auto-refresh completed.`;
+      el("statusMsg").textContent = `Portfolio "${p.name}" refreshed (${totalPulled} total fields updated across ${p.stocks.length} stocks).`;
     });
 
     el("addStockBtn").addEventListener("click", addStockToPortfolio);
