@@ -190,6 +190,7 @@
     .pill.pass { background: var(--green-bg); color: var(--green); }
     .pill.warn { background: var(--yellow-bg); color: var(--yellow); }
     .pill.fail { background: var(--red-bg); color: var(--red); }
+    .pill.na { background: rgba(148, 163, 184, 0.16); color: var(--muted); }
 
     /* Trade Plan Metrics */
     .metrics-grid {
@@ -227,7 +228,7 @@
       <div class="bench-group">
         <span class="bench-chip" id="spyQuoteChip">SPY: --</span>
         <span class="bench-chip" id="qqqQuoteChip">QQQ: --</span>
-        <span class="helper-note" id="marketAutoHint" style="margin-top:0;">Sync SPY/QQQ to check benchmark tape; manual M selection is preserved unless unlocked.</span>
+        <span class="helper-note" id="marketAutoHint" style="margin-top:0;">One-day SPY/QQQ move is only a rough hint. Confirm uptrend manually (follow-through day, few distribution days).</span>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="btn btn-secondary" id="syncBenchmarksBtn" type="button" style="padding:6px 12px; font-size:0.8rem;">Sync SPY &amp; QQQ</button>
@@ -339,58 +340,59 @@
                 <option value="extended">Extended (&gt;5% Past Pivot - Do Not Chase)</option>
                 <option value="downtrend">Broken / Below Key Moving Averages</option>
               </select>
-              <div class="helper-note">Auto-suggested from Price vs. Pivot &amp; RS; editing manually locks your override.</div>
+              <div class="helper-note" id="pivotHintNote">Auto-suggested from Price vs. Pivot &amp; RS; editing manually locks your override.</div>
             </div>
 
             <div class="field-group">
               <label for="price">Current Stock Price ($)</label>
-              <input type="number" id="price" step="0.01" value="0" />
+              <input type="number" id="price" step="0.01" value="" />
             </div>
 
             <div class="field-group">
-              <label for="pivotPrice">Breakout Pivot / 52-Wk High ($)</label>
-              <input type="number" id="pivotPrice" step="0.01" value="0" />
+              <label for="pivotPrice">Breakout Pivot / 52-Wk High ($) <span id="pivotSourceLabel" style="color:var(--accent); font-weight:700;">Pivot: 52-wk high (proxy)</span></label>
+              <input type="number" id="pivotPrice" step="0.01" value="" />
             </div>
 
             <div class="field-group">
               <label for="qEps">C &mdash; Current Quarterly EPS YoY (%)</label>
-              <input type="number" id="qEps" step="0.1" value="0" />
+              <input type="number" id="qEps" step="0.1" value="" />
             </div>
 
             <div class="field-group">
               <label for="aEps">A &mdash; 3-Yr Annual EPS Growth (%)</label>
-              <input type="number" id="aEps" step="0.1" value="0" />
+              <input type="number" id="aEps" step="0.1" value="" />
             </div>
 
             <div class="field-group">
               <label for="roe">A &mdash; Return on Equity / ROE (%)</label>
-              <input type="number" id="roe" step="0.1" value="0" />
+              <input type="number" id="roe" step="0.1" value="" />
             </div>
 
             <div class="field-group">
               <label for="volSurge">S &mdash; Breakout Volume vs Avg (%)</label>
-              <input type="number" id="volSurge" step="0.1" value="0" />
+              <input type="number" id="volSurge" step="0.1" value="" />
               <div class="helper-note">Direct % difference vs. average volume (e.g., <code>45</code> = +45% above average).</div>
             </div>
 
             <div class="field-group">
               <label for="rsRating">L &mdash; Relative Strength Rating (1&ndash;99)</label>
-              <input type="number" id="rsRating" min="1" max="99" value="50" />
+              <input type="number" id="rsRating" min="1" max="99" value="" />
               <div class="helper-note">Direct 1&ndash;99 RS score or calculated from the 6M RS helper above.</div>
             </div>
 
             <div class="field-group">
               <label for="instSponsorship">I &mdash; Institutional Sponsorship</label>
               <select id="instSponsorship">
+                <option value="unknown">Unknown / Not Set</option>
                 <option value="strong">Strong Fund Accumulation</option>
-                <option value="moderate" selected>Moderate / Stable Ownership</option>
+                <option value="moderate">Moderate / Stable Ownership</option>
                 <option value="weak">Weak / Low-Priced Speculative</option>
               </select>
             </div>
 
             <div class="field-group">
               <label for="allocPct">Target Position Weight (%)</label>
-              <input type="number" id="allocPct" min="1" max="100" value="20" />
+              <input type="number" id="allocPct" min="0" max="100" value="20" />
             </div>
           </div>
         </div>
@@ -489,25 +491,28 @@
   <script>
     const STORAGE_KEY = "canslim_portfolios_v6";
     const LEGACY_KEYS = ["canslim_portfolios_v5", "canslim_portfolios_v4"];
+    const TICKER_REGEX = /^[A-Z][A-Z.\-]{0,5}$/;
 
     const DEFAULT_PORTFOLIOS = [
       {
         id: "tech-growth",
         name: "Tech Growth Portfolio",
         capital: 50000,
+        marketTrend: "choppy",
         manualMarketOverride: false,
         stocks: [
-          { ticker: "MSFT", marketTrend: "choppy", manualChartOverride: false, chartSetup: "building", price: 508.29, pivotPrice: 559.15, qEps: 32.37, aEps: 22.83, roe: 33.21, volSurge: 22.5, rsRating: 80, instSponsorship: "strong", allocPct: 20 },
-          { ticker: "TSM", marketTrend: "choppy", manualChartOverride: false, chartSetup: "building", price: 362.62, pivotPrice: 487.47, qEps: 35.0, aEps: 26.0, roe: 28.0, volSurge: 48.0, rsRating: 84, instSponsorship: "strong", allocPct: 20 }
+          { ticker: "MSFT", manualChartOverride: false, pivotSource: "auto", chartSetup: "building", price: 508.29, pivotPrice: 559.15, qEps: 32.37, aEps: 22.83, roe: 33.21, volSurge: 22.5, rsRating: 80, instSponsorship: "strong", allocPct: 20 },
+          { ticker: "TSM", manualChartOverride: false, pivotSource: "auto", chartSetup: "building", price: 362.62, pivotPrice: 487.47, qEps: 35.0, aEps: 26.0, roe: 28.0, volSurge: 48.0, rsRating: 84, instSponsorship: "strong", allocPct: 20 }
         ]
       },
       {
         id: "defensive-income",
         name: "Core Watchlist",
         capital: 30000,
+        marketTrend: "choppy",
         manualMarketOverride: false,
         stocks: [
-          { ticker: "J", marketTrend: "choppy", manualChartOverride: false, chartSetup: "building", price: 158.23, pivotPrice: 162.00, qEps: -22.95, aEps: 14.0, roe: 18.5, volSurge: -8.0, rsRating: 75, instSponsorship: "strong", allocPct: 20 }
+          { ticker: "J", manualChartOverride: false, pivotSource: "auto", chartSetup: "building", price: 158.23, pivotPrice: 162.00, qEps: -22.95, aEps: 14.0, roe: 18.5, volSurge: -8.0, rsRating: 75, instSponsorship: "strong", allocPct: 20 }
         ]
       }
     ];
@@ -516,22 +521,127 @@
       return JSON.parse(JSON.stringify(DEFAULT_PORTFOLIOS));
     }
 
+    function isFiniteNum(v) {
+      return typeof v === "number" && Number.isFinite(v);
+    }
+
+    function parseNullableNum(v) {
+      if (v === null || v === undefined || v === "") return null;
+      const n = typeof v === "number" ? v : Number(String(v).trim());
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function normalizePortfolios(data) {
+      if (!Array.isArray(data) || data.length === 0) return null;
+
+      const validTrends = new Set(["uptrend", "choppy", "correction"]);
+      const validInst = new Set(["strong", "moderate", "weak", "unknown"]);
+      const validSetups = new Set(["breakout", "building", "extended", "downtrend"]);
+      const seenIds = new Set();
+      const outPortfolios = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const rawP = data[i];
+        if (!rawP || typeof rawP !== "object") return null;
+        if (typeof rawP.name !== "string") return null;
+        const trimmedName = rawP.name.trim().slice(0, 60);
+        if (!trimmedName) return null;
+
+        let id = typeof rawP.id === "string" && rawP.id.trim() ? rawP.id.trim() : `port-${i + 1}`;
+        while (seenIds.has(id)) {
+          id = `${id}-${Math.random().toString(36).slice(2, 6)}`;
+        }
+        seenIds.add(id);
+
+        const capNum = parseNullableNum(rawP.capital);
+        const capital = capNum !== null && capNum >= 0 ? capNum : 25000;
+
+        const rawStocks = Array.isArray(rawP.stocks) ? rawP.stocks : [];
+        const stocks = [];
+        for (const rawS of rawStocks) {
+          if (!rawS || typeof rawS !== "object") continue;
+          const tkr = typeof rawS.ticker === "string" ? rawS.ticker.trim().toUpperCase() : "";
+          if (!TICKER_REGEX.test(tkr)) continue;
+
+          const allocRaw = parseNullableNum(rawS.allocPct);
+          const allocPct = allocRaw !== null && allocRaw >= 0 && allocRaw <= 100 ? allocRaw : 20;
+
+          const inst = typeof rawS.instSponsorship === "string" && validInst.has(rawS.instSponsorship)
+            ? rawS.instSponsorship
+            : "unknown";
+          const setup = typeof rawS.chartSetup === "string" && validSetups.has(rawS.chartSetup)
+            ? rawS.chartSetup
+            : "building";
+          const pivotSource = rawS.pivotSource === "manual" ? "manual" : "auto";
+
+          stocks.push({
+            ticker: tkr,
+            manualChartOverride: Boolean(rawS.manualChartOverride),
+            pivotSource,
+            chartSetup: setup,
+            price: parseNullableNum(rawS.price),
+            pivotPrice: parseNullableNum(rawS.pivotPrice),
+            qEps: parseNullableNum(rawS.qEps),
+            aEps: parseNullableNum(rawS.aEps),
+            roe: parseNullableNum(rawS.roe),
+            volSurge: parseNullableNum(rawS.volSurge),
+            rsRating: parseNullableNum(rawS.rsRating),
+            instSponsorship: inst,
+            allocPct
+          });
+        }
+
+        let trend = typeof rawP.marketTrend === "string" && validTrends.has(rawP.marketTrend)
+          ? rawP.marketTrend
+          : null;
+        if (!trend) {
+          const firstStockTrend = rawStocks.find((s) => s && typeof s.marketTrend === "string" && validTrends.has(s.marketTrend));
+          trend = firstStockTrend ? firstStockTrend.marketTrend : "choppy";
+        }
+
+        outPortfolios.push({
+          id,
+          name: trimmedName,
+          capital,
+          marketTrend: trend,
+          manualMarketOverride: Boolean(rawP.manualMarketOverride),
+          stocks
+        });
+      }
+
+      return outPortfolios.length > 0 ? outPortfolios : null;
+    }
+
+    let startupLoadNotice = "";
+
     function loadInitialPortfolios() {
+      startupLoadNotice = "";
+      let foundAnyStored = false;
+
       const current = localStorage.getItem(STORAGE_KEY);
-      if (current) {
+      if (current !== null) {
+        foundAnyStored = true;
         try {
           const parsed = JSON.parse(current);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          const norm = normalizePortfolios(parsed);
+          if (norm) return norm;
         } catch {}
       }
+
       for (const k of LEGACY_KEYS) {
         const legacy = localStorage.getItem(k);
-        if (legacy) {
+        if (legacy !== null) {
+          foundAnyStored = true;
           try {
             const parsedLegacy = JSON.parse(legacy);
-            if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) return parsedLegacy;
+            const normLegacy = normalizePortfolios(parsedLegacy);
+            if (normLegacy) return normLegacy;
           } catch {}
         }
+      }
+
+      if (foundAnyStored) {
+        startupLoadNotice = "Saved portfolio data was invalid or corrupted; loaded defaults without overwriting storage.";
       }
       return cloneDefaults();
     }
@@ -545,39 +655,52 @@
 
     const el = (id) => document.getElementById(id);
 
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
     el("finnhubKey").value = localStorage.getItem("canslim_finnhub_key") || "";
     el("finnhubKey").addEventListener("input", (e) => {
       localStorage.setItem("canslim_finnhub_key", e.target.value.trim());
     });
 
     function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolios));
+      const valid = normalizePortfolios(portfolios);
+      if (!valid) return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(valid));
     }
 
-    function suggestChartSetup(price, pivot, rs = 80) {
-      const p = Number(price) || 0;
-      const pv = Number(pivot) || 0;
-      const r = Number(rs) || 0;
-      if (!p || !pv || pv <= 0) return "building";
+    function suggestChartSetup(price, pivot, rs = 80, pivotSource = "auto") {
+      const p = parseNullableNum(price);
+      const pv = parseNullableNum(pivot);
+      const r = parseNullableNum(rs);
+      if (p === null || pv === null || pv <= 0) return "building";
       const pctFromPivot = ((p - pv) / pv) * 100;
       if (pctFromPivot > 5) return "extended";
-      if (pctFromPivot >= -1 && pctFromPivot <= 5 && r >= 75) return "breakout";
-      if (pctFromPivot <= -15 || r < 50) return "downtrend";
+      if (r !== null && r < 50) return "downtrend";
+      if (pctFromPivot <= -15) return "downtrend";
+      if (pivotSource === "auto") return "building";
+      if (pctFromPivot >= 0 && pctFromPivot <= 5 && r !== null && r >= 75) return "breakout";
       return "building";
     }
 
     function estimateSixMonthRS(startPrice, endPrice) {
-      const s = Number(startPrice);
-      const e = Number(endPrice);
-      if (!s || !e || s <= 0) return null;
+      const s = parseNullableNum(startPrice);
+      const e = parseNullableNum(endPrice);
+      if (s === null || e === null || s <= 0) return null;
       const pct = ((e - s) / s) * 100;
       return Math.max(1, Math.min(99, Math.round(50 + pct * 1.1)));
     }
 
     function computeVolumeSurgePct(currentVol, avgVol) {
-      const cur = Number(currentVol);
-      const avg = Number(avgVol);
-      if (!Number.isFinite(cur) || !Number.isFinite(avg) || avg <= 0) return null;
+      const cur = parseNullableNum(currentVol);
+      const avg = parseNullableNum(avgVol);
+      if (cur === null || avg === null || avg <= 0) return null;
       return Number((((cur - avg) / avg) * 100).toFixed(1));
     }
 
@@ -608,18 +731,19 @@
       reader.onload = function(e) {
         try {
           const imported = JSON.parse(e.target.result);
-          if (Array.isArray(imported) && imported.length > 0) {
-            portfolios = imported;
+          const normalized = normalizePortfolios(imported);
+          if (normalized) {
+            portfolios = normalized;
             activePortfolioId = portfolios[0].id;
             activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
             saveState();
             renderAll();
             el("statusMsg").textContent = "Portfolios imported successfully!";
           } else {
-            alert("Invalid portfolio file format.");
+            alert("Invalid portfolio file");
           }
-        } catch (err) {
-          alert("Error parsing JSON file: " + err.message);
+        } catch {
+          alert("Invalid portfolio file");
         }
       };
       reader.readAsText(file);
@@ -641,13 +765,20 @@
       container.innerHTML = "";
       portfolios.forEach((p) => {
         const btn = document.createElement("button");
+        btn.type = "button";
         btn.className = `tab-btn ${p.id === activePortfolioId ? "active" : ""}`;
-        btn.innerHTML = `${p.name} <span class="tab-badge">${p.stocks.length}</span>`;
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = p.name;
+        const badgeSpan = document.createElement("span");
+        badgeSpan.className = "tab-badge";
+        badgeSpan.textContent = String(p.stocks.length);
+        btn.appendChild(nameSpan);
+        btn.appendChild(badgeSpan);
         btn.onclick = () => {
           activePortfolioId = p.id;
           const ap = getActivePortfolio();
           activeTicker = ap.stocks.length > 0 ? ap.stocks[0].ticker : null;
-          el("portfolioCapital").value = ap.capital;
+          el("portfolioCapital").value = isFiniteNum(ap.capital) ? ap.capital : 0;
           renderAll();
         };
         container.appendChild(btn);
@@ -655,13 +786,14 @@
     }
 
     el("createPortfolioBtn").addEventListener("click", () => {
-      const name = el("newPortfolioName").value.trim();
+      const name = el("newPortfolioName").value.trim().slice(0, 60);
       if (!name) return;
       const newId = "port-" + Date.now();
       portfolios.push({
         id: newId,
-        name: name,
+        name,
         capital: 25000,
+        marketTrend: "choppy",
         manualMarketOverride: false,
         stocks: []
       });
@@ -690,23 +822,42 @@
 
     el("portfolioCapital").addEventListener("input", (e) => {
       const p = getActivePortfolio();
-      p.capital = parseFloat(e.target.value) || 0;
+      const parsed = parseNullableNum(e.target.value);
+      p.capital = parsed !== null && parsed >= 0 ? parsed : 0;
       saveState();
       evaluateStock();
       updatePortfolioAnalysis();
     });
 
+    function updatePivotUi(s) {
+      if (!s) {
+        el("pivotSourceLabel").textContent = "Pivot: 52-wk high (proxy)";
+        el("pivotHintNote").textContent = "Auto-suggested from Price vs. Pivot & RS; editing manually locks your override.";
+        return;
+      }
+      const isManual = s.pivotSource === "manual";
+      el("pivotSourceLabel").textContent = isManual ? "Pivot: manual" : "Pivot: 52-wk high (proxy)";
+      if (!isManual) {
+        el("pivotHintNote").textContent = "Enter the true base pivot to confirm a breakout.";
+      } else {
+        el("pivotHintNote").textContent = "Manual pivot set; breakout timing evaluated from price vs. pivot and RS.";
+      }
+    }
+
     function renderStockCards() {
       const p = getActivePortfolio();
       el("activePortfolioLabel").textContent = p.name;
-      el("portfolioTitleCount").textContent = p.stocks.length;
-      el("portfolioCapital").value = p.capital;
+      el("portfolioTitleCount").textContent = String(p.stocks.length);
+      el("portfolioCapital").value = isFiniteNum(p.capital) ? p.capital : 0;
 
       const container = el("stockCardsContainer");
       container.innerHTML = "";
 
       if (p.stocks.length === 0) {
-        container.innerHTML = `<div style="text-align:center; color:var(--muted); padding:20px; font-size:0.85rem;">No stocks in this portfolio yet. Use the quick add box above to fetch and add stocks.</div>`;
+        const emptyDiv = document.createElement("div");
+        emptyDiv.style.cssText = "text-align:center; color:var(--muted); padding:20px; font-size:0.85rem;";
+        emptyDiv.textContent = "No stocks in this portfolio yet. Use the quick add box above to fetch and add stocks.";
+        container.appendChild(emptyDiv);
         return;
       }
 
@@ -714,29 +865,73 @@
         const { color } = computeStockSignal(s);
         const card = document.createElement("div");
         card.className = `stock-row-card ${s.ticker === activeTicker ? "active" : ""}`;
-        card.innerHTML = `
-          <div>
-            <strong style="font-size:1rem; display:flex; align-items:center; gap:6px;">
-              <span class="dot ${color}"></span>${s.ticker}
-            </strong>
-            <span style="font-size:0.75rem; color:var(--muted);">Pivot: $${s.pivotPrice.toFixed(2)} | S: ${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%</span>
-          </div>
-          <div>
-            <span style="font-size:0.72rem; color:var(--muted);">Price</span>
-            <strong style="font-size:0.9rem;">$${s.price.toFixed(2)}</strong>
-          </div>
-          <div>
-            <span style="font-size:0.72rem; color:var(--muted);">Qtr EPS</span>
-            <strong style="font-size:0.9rem; color:${s.qEps >= 25 ? 'var(--green)' : (s.qEps >= 12 ? 'var(--yellow)' : 'var(--red)')};">${s.qEps >= 0 ? '+' : ''}${s.qEps}%</strong>
-          </div>
-          <div>
-            <span style="font-size:0.72rem; color:var(--muted);">RS / Weight</span>
-            <strong style="font-size:0.9rem;">RS ${s.rsRating} &bull; ${s.allocPct}%</strong>
-          </div>
-          <div>
-            <span class="pill ${color === 'green' ? 'pass' : (color === 'yellow' ? 'warn' : 'fail')}">${color.toUpperCase()}</span>
-          </div>
-        `;
+
+        const col1 = document.createElement("div");
+        const tkrStrong = document.createElement("strong");
+        tkrStrong.style.cssText = "font-size:1rem; display:flex; align-items:center; gap:6px;";
+        const dotSpan = document.createElement("span");
+        dotSpan.className = `dot ${color}`;
+        tkrStrong.appendChild(dotSpan);
+        tkrStrong.appendChild(document.createTextNode(s.ticker));
+
+        const sub1 = document.createElement("span");
+        sub1.style.cssText = "font-size:0.75rem; color:var(--muted);";
+        const pivText = isFiniteNum(s.pivotPrice) ? `$${s.pivotPrice.toFixed(2)}` : "N/A";
+        const volText = isFiniteNum(s.volSurge) ? `${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%` : "N/A";
+        sub1.textContent = `Pivot: ${pivText} | S: ${volText}`;
+        col1.appendChild(tkrStrong);
+        col1.appendChild(sub1);
+
+        const col2 = document.createElement("div");
+        const lbl2 = document.createElement("span");
+        lbl2.style.cssText = "font-size:0.72rem; color:var(--muted);";
+        lbl2.textContent = "Price";
+        const val2 = document.createElement("strong");
+        val2.style.fontSize = "0.9rem";
+        val2.textContent = isFiniteNum(s.price) ? `$${s.price.toFixed(2)}` : "N/A";
+        col2.appendChild(lbl2);
+        col2.appendChild(val2);
+
+        const col3 = document.createElement("div");
+        const lbl3 = document.createElement("span");
+        lbl3.style.cssText = "font-size:0.72rem; color:var(--muted);";
+        lbl3.textContent = "Qtr EPS";
+        const val3 = document.createElement("strong");
+        val3.style.fontSize = "0.9rem";
+        if (isFiniteNum(s.qEps)) {
+          val3.style.color = s.qEps >= 25 ? "var(--green)" : (s.qEps >= 12 ? "var(--yellow)" : "var(--red)");
+          val3.textContent = `${s.qEps >= 0 ? "+" : ""}${s.qEps}%`;
+        } else {
+          val3.style.color = "var(--muted)";
+          val3.textContent = "N/A";
+        }
+        col3.appendChild(lbl3);
+        col3.appendChild(val3);
+
+        const col4 = document.createElement("div");
+        const lbl4 = document.createElement("span");
+        lbl4.style.cssText = "font-size:0.72rem; color:var(--muted);";
+        lbl4.textContent = "RS / Weight";
+        const val4 = document.createElement("strong");
+        val4.style.fontSize = "0.9rem";
+        const rsText = isFiniteNum(s.rsRating) ? `RS ${s.rsRating}` : "RS N/A";
+        const allocDisp = isFiniteNum(s.allocPct) ? s.allocPct : 0;
+        val4.textContent = `${rsText} • ${allocDisp}%`;
+        col4.appendChild(lbl4);
+        col4.appendChild(val4);
+
+        const col5 = document.createElement("div");
+        const pill = document.createElement("span");
+        pill.className = `pill ${color === "green" ? "pass" : (color === "yellow" ? "warn" : "fail")}`;
+        pill.textContent = color.toUpperCase();
+        col5.appendChild(pill);
+
+        card.appendChild(col1);
+        card.appendChild(col2);
+        card.appendChild(col3);
+        card.appendChild(col4);
+        card.appendChild(col5);
+
         card.onclick = () => {
           activeTicker = s.ticker;
           loadStockIntoForm(s);
@@ -748,63 +943,72 @@
     }
 
     function loadStockIntoForm(s) {
+      const p = getActivePortfolio();
       if (!s) {
         el("editingStockTitle").textContent = "Editing: None";
         el("nModeBadge").textContent = "";
+        updatePivotUi(null);
         return;
       }
       el("editingStockTitle").textContent = `Editing: ${s.ticker}`;
-      const autoN = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+      const autoN = suggestChartSetup(s.price, s.pivotPrice, s.rsRating, s.pivotSource);
       el("nModeBadge").textContent = s.manualChartOverride
         ? `(Manual Override | Auto N: ${autoN})`
         : `(Auto N Active: ${autoN})`;
-      el("marketTrend").value = s.marketTrend;
-      el("chartSetup").value = s.chartSetup;
-      el("price").value = s.price;
-      el("pivotPrice").value = s.pivotPrice;
-      el("qEps").value = s.qEps;
-      el("aEps").value = s.aEps;
-      el("roe").value = s.roe;
-      el("volSurge").value = s.volSurge;
-      el("rsRating").value = s.rsRating;
-      el("instSponsorship").value = s.instSponsorship;
-      el("allocPct").value = s.allocPct;
-      el("rsEndInput").value = s.price;
+      el("marketTrend").value = p && p.marketTrend ? p.marketTrend : "choppy";
+      el("chartSetup").value = s.chartSetup || "building";
+      el("price").value = isFiniteNum(s.price) ? s.price : "";
+      el("pivotPrice").value = isFiniteNum(s.pivotPrice) ? s.pivotPrice : "";
+      el("qEps").value = isFiniteNum(s.qEps) ? s.qEps : "";
+      el("aEps").value = isFiniteNum(s.aEps) ? s.aEps : "";
+      el("roe").value = isFiniteNum(s.roe) ? s.roe : "";
+      el("volSurge").value = isFiniteNum(s.volSurge) ? s.volSurge : "";
+      el("rsRating").value = isFiniteNum(s.rsRating) ? s.rsRating : "";
+      el("instSponsorship").value = s.instSponsorship || "unknown";
+      el("allocPct").value = isFiniteNum(s.allocPct) ? s.allocPct : 0;
+      el("rsEndInput").value = isFiniteNum(s.price) ? s.price : "";
+      updatePivotUi(s);
     }
 
     function updateStockFromForm(sourceId = "") {
       const s = getActiveStock();
       const p = getActivePortfolio();
-      if (!s) return;
+      if (!s || !p) return;
 
       if (sourceId === "marketTrend") {
         p.manualMarketOverride = true;
+        p.marketTrend = el("marketTrend").value;
       }
       if (sourceId === "chartSetup") {
         s.manualChartOverride = true;
       }
+      if (sourceId === "pivotPrice") {
+        s.pivotSource = "manual";
+      }
 
-      s.marketTrend = el("marketTrend").value;
       s.chartSetup = el("chartSetup").value;
-      s.price = parseFloat(el("price").value) || 0;
-      s.pivotPrice = parseFloat(el("pivotPrice").value) || s.price;
-      s.qEps = parseFloat(el("qEps").value) || 0;
-      s.aEps = parseFloat(el("aEps").value) || 0;
-      s.roe = parseFloat(el("roe").value) || 0;
-      s.volSurge = parseFloat(el("volSurge").value) || 0;
-      s.rsRating = parseFloat(el("rsRating").value) || 50;
+      s.price = parseNullableNum(el("price").value);
+      s.pivotPrice = parseNullableNum(el("pivotPrice").value);
+      s.qEps = parseNullableNum(el("qEps").value);
+      s.aEps = parseNullableNum(el("aEps").value);
+      s.roe = parseNullableNum(el("roe").value);
+      s.volSurge = parseNullableNum(el("volSurge").value);
+      s.rsRating = parseNullableNum(el("rsRating").value);
       s.instSponsorship = el("instSponsorship").value;
-      s.allocPct = parseFloat(el("allocPct").value) || 20;
+
+      const allocParsed = parseNullableNum(el("allocPct").value);
+      s.allocPct = allocParsed !== null && allocParsed >= 0 && allocParsed <= 100 ? allocParsed : 0;
 
       if (!s.manualChartOverride && (sourceId === "price" || sourceId === "pivotPrice" || sourceId === "rsRating")) {
-        s.chartSetup = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+        s.chartSetup = suggestChartSetup(s.price, s.pivotPrice, s.rsRating, s.pivotSource);
         el("chartSetup").value = s.chartSetup;
       }
 
-      const autoN = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+      const autoN = suggestChartSetup(s.price, s.pivotPrice, s.rsRating, s.pivotSource);
       el("nModeBadge").textContent = s.manualChartOverride
         ? `(Manual Override | Auto N: ${autoN})`
         : `(Auto N Active: ${autoN})`;
+      updatePivotUi(s);
 
       saveState();
       renderStockCards();
@@ -822,7 +1026,7 @@
       const s = getActiveStock();
       if (!s) return;
       s.manualChartOverride = false;
-      s.chartSetup = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+      s.chartSetup = suggestChartSetup(s.price, s.pivotPrice, s.rsRating, s.pivotSource);
       el("chartSetup").value = s.chartSetup;
       saveState();
       renderStockCards();
@@ -834,8 +1038,8 @@
     el("applyEstRsBtn").addEventListener("click", () => {
       const s = getActiveStock();
       if (!s) return;
-      const startP = parseFloat(el("rsStartInput").value);
-      const endP = parseFloat(el("rsEndInput").value) || s.price;
+      const startP = parseNullableNum(el("rsStartInput").value);
+      const endP = parseNullableNum(el("rsEndInput").value) ?? s.price;
       const est = estimateSixMonthRS(startP, endP);
       if (est === null) {
         el("statusMsg").textContent = "Enter a valid ~6-month starting price to estimate RS.";
@@ -844,7 +1048,7 @@
       s.rsRating = est;
       el("rsRating").value = est;
       if (!s.manualChartOverride) {
-        s.chartSetup = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+        s.chartSetup = suggestChartSetup(s.price, s.pivotPrice, s.rsRating, s.pivotSource);
         el("chartSetup").value = s.chartSetup;
       }
       saveState();
@@ -857,8 +1061,8 @@
     el("applyVolSurgeBtn").addEventListener("click", () => {
       const s = getActiveStock();
       if (!s) return;
-      const curVol = parseFloat(el("volCurrentInput").value);
-      const avgVol = parseFloat(el("volAvgInput").value);
+      const curVol = parseNullableNum(el("volCurrentInput").value);
+      const avgVol = parseNullableNum(el("volAvgInput").value);
       const surge = computeVolumeSurgePct(curVol, avgVol);
       if (surge === null) {
         el("statusMsg").textContent = "Enter both session/recent volume and average daily volume (> 0) to calculate S %.";
@@ -897,17 +1101,17 @@
     async function fetchStockDataFromFinnhub(ticker, apiKey, existingStock = null) {
       const base = existingStock ? { ...existingStock, ticker } : {
         ticker,
-        marketTrend: "choppy",
         manualChartOverride: false,
+        pivotSource: "auto",
         chartSetup: "building",
-        price: 100.00,
-        pivotPrice: 105.00,
-        qEps: 25.0,
-        aEps: 20.0,
-        roe: 18.0,
-        volSurge: 0,
-        rsRating: 80,
-        instSponsorship: "strong",
+        price: null,
+        pivotPrice: null,
+        qEps: null,
+        aEps: null,
+        roe: null,
+        volSurge: null,
+        rsRating: null,
+        instSponsorship: "unknown",
         allocPct: 20
       };
 
@@ -919,7 +1123,8 @@
       const updatedFields = [];
       const diagnostics = [];
 
-      if (quoteRes.ok && quoteRes.data && typeof quoteRes.data.c === "number" && quoteRes.data.c > 0) {
+      const hasValidQuote = quoteRes.ok && quoteRes.data && isFiniteNum(quoteRes.data.c) && quoteRes.data.c > 0;
+      if (hasValidQuote) {
         base.price = Number(quoteRes.data.c.toFixed(2));
         updatedFields.push("Price");
       } else {
@@ -928,22 +1133,51 @@
 
       if (metricRes.ok && metricRes.data && metricRes.data.metric) {
         const m = metricRes.data.metric;
-        if (typeof m["52WeekHigh"] === "number" && m["52WeekHigh"] > 0) {
+        if (base.pivotSource !== "manual" && isFiniteNum(m["52WeekHigh"]) && m["52WeekHigh"] > 0) {
           base.pivotPrice = Number(m["52WeekHigh"].toFixed(2));
+          base.pivotSource = "auto";
           updatedFields.push("52-Wk High");
         }
-        const qGrowth = m.epsGrowthQuarterlyYoy ?? m.quarterlyEarningsGrowthYoy ?? m.epsGrowthTTMYoy;
-        if (typeof qGrowth === "number" && Number.isFinite(qGrowth)) {
+
+        let qFieldUsed = null;
+        let qGrowth = null;
+        if (isFiniteNum(m.epsGrowthQuarterlyYoy)) {
+          qGrowth = m.epsGrowthQuarterlyYoy;
+          qFieldUsed = "epsGrowthQuarterlyYoy";
+        } else if (isFiniteNum(m.quarterlyEarningsGrowthYoy)) {
+          qGrowth = m.quarterlyEarningsGrowthYoy;
+          qFieldUsed = "quarterlyEarningsGrowthYoy";
+        } else if (isFiniteNum(m.epsGrowthTTMYoy)) {
+          qGrowth = m.epsGrowthTTMYoy;
+          qFieldUsed = "epsGrowthTTMYoy";
+          diagnostics.push("Qtr EPS from fallback field: epsGrowthTTMYoy");
+        }
+        if (qGrowth !== null) {
           base.qEps = Number(qGrowth.toFixed(2));
-          updatedFields.push("Qtr EPS");
+          updatedFields.push(qFieldUsed === "epsGrowthTTMYoy" ? "Qtr EPS (epsGrowthTTMYoy)" : "Qtr EPS");
         }
-        const aGrowth = m.epsGrowth3Y ?? m.epsGrowth5Y ?? m.epsGrowthAnnual;
-        if (typeof aGrowth === "number" && Number.isFinite(aGrowth)) {
+
+        let aFieldUsed = null;
+        let aGrowth = null;
+        if (isFiniteNum(m.epsGrowth3Y)) {
+          aGrowth = m.epsGrowth3Y;
+          aFieldUsed = "epsGrowth3Y";
+        } else if (isFiniteNum(m.epsGrowth5Y)) {
+          aGrowth = m.epsGrowth5Y;
+          aFieldUsed = "epsGrowth5Y";
+          diagnostics.push("Annual EPS from fallback field: epsGrowth5Y");
+        } else if (isFiniteNum(m.epsGrowthAnnual)) {
+          aGrowth = m.epsGrowthAnnual;
+          aFieldUsed = "epsGrowthAnnual";
+          diagnostics.push("Annual EPS from fallback field: epsGrowthAnnual");
+        }
+        if (aGrowth !== null) {
           base.aEps = Number(aGrowth.toFixed(2));
-          updatedFields.push("3-Yr EPS");
+          updatedFields.push(aFieldUsed && aFieldUsed !== "epsGrowth3Y" ? `3-Yr EPS (${aFieldUsed})` : "3-Yr EPS");
         }
-        const roeVal = m.roeTTM ?? m.roeRfy;
-        if (typeof roeVal === "number" && Number.isFinite(roeVal)) {
+
+        const roeVal = isFiniteNum(m.roeTTM) ? m.roeTTM : (isFiniteNum(m.roeRfy) ? m.roeRfy : null);
+        if (roeVal !== null) {
           base.roe = Number(roeVal.toFixed(2));
           updatedFields.push("ROE");
         }
@@ -952,12 +1186,13 @@
       }
 
       if (!base.manualChartOverride) {
-        base.chartSetup = suggestChartSetup(base.price, base.pivotPrice, base.rsRating);
+        base.chartSetup = suggestChartSetup(base.price, base.pivotPrice, base.rsRating, base.pivotSource);
         updatedFields.push("Auto N");
       }
 
       return {
         stockObj: base,
+        hasValidQuote,
         fetchedCount: updatedFields.length,
         updatedFields,
         diagnostics
@@ -971,29 +1206,25 @@
       ]);
 
       let avgDp = null;
-      if (spyRes.ok && spyRes.data && typeof spyRes.data.c === "number" && spyRes.data.c > 0) {
-        const dp = Number(spyRes.data.dp) || 0;
+      if (spyRes.ok && spyRes.data && isFiniteNum(spyRes.data.c) && spyRes.data.c > 0) {
+        const dp = isFiniteNum(spyRes.data.dp) ? spyRes.data.dp : 0;
         el("spyQuoteChip").textContent = `SPY: $${spyRes.data.c.toFixed(2)} (${dp >= 0 ? "+" : ""}${dp.toFixed(2)}%)`;
         avgDp = dp;
       }
-      if (qqqRes.ok && qqqRes.data && typeof qqqRes.data.c === "number" && qqqRes.data.c > 0) {
-        const dp = Number(qqqRes.data.dp) || 0;
+      if (qqqRes.ok && qqqRes.data && isFiniteNum(qqqRes.data.c) && qqqRes.data.c > 0) {
+        const dp = isFiniteNum(qqqRes.data.dp) ? qqqRes.data.dp : 0;
         el("qqqQuoteChip").textContent = `QQQ: $${qqqRes.data.c.toFixed(2)} (${dp >= 0 ? "+" : ""}${dp.toFixed(2)}%)`;
         avgDp = avgDp !== null ? (avgDp + dp) / 2 : dp;
       }
 
       const p = getActivePortfolio();
       if (avgDp !== null && p && !p.manualMarketOverride) {
-        let suggestedM = "choppy";
-        if (avgDp <= -1.5) suggestedM = "correction";
-        else if (avgDp >= 0.75) suggestedM = "uptrend";
-        p.stocks.forEach((st) => {
-          st.marketTrend = suggestedM;
-        });
+        const suggestedM = avgDp <= -1.5 ? "correction" : "choppy";
+        p.marketTrend = suggestedM;
         saveState();
-        el("marketAutoHint").textContent = `SPY/QQQ avg move (${avgDp >= 0 ? "+" : ""}${avgDp.toFixed(2)}%) suggests M = ${suggestedM.toUpperCase()}.`;
+        el("marketAutoHint").textContent = "One-day SPY/QQQ move is only a rough hint. Confirm uptrend manually (follow-through day, few distribution days).";
       } else if (avgDp !== null && p && p.manualMarketOverride) {
-        el("marketAutoHint").textContent = `SPY/QQQ synced; manual M override kept intact.`;
+        el("marketAutoHint").textContent = "One-day SPY/QQQ move is only a rough hint. Confirm uptrend manually (follow-through day, few distribution days).";
       }
     }
 
@@ -1020,35 +1251,45 @@
     async function addStockToPortfolio() {
       const ticker = el("quickTicker").value.trim().toUpperCase();
       if (!ticker) return;
+      if (!TICKER_REGEX.test(ticker)) {
+        el("statusMsg").textContent = `Invalid ticker format: "${ticker}".`;
+        return;
+      }
+
       const apiKey = el("finnhubKey").value.trim();
       const p = getActivePortfolio();
 
       let stockObj = {
         ticker,
-        marketTrend: "choppy",
         manualChartOverride: false,
+        pivotSource: "auto",
         chartSetup: "building",
-        price: 100.00,
-        pivotPrice: 105.00,
-        qEps: 25.0,
-        aEps: 20.0,
-        roe: 18.0,
-        volSurge: 0,
-        rsRating: 80,
-        instSponsorship: "strong",
+        price: null,
+        pivotPrice: null,
+        qEps: null,
+        aEps: null,
+        roe: null,
+        volSurge: null,
+        rsRating: null,
+        instSponsorship: "unknown",
         allocPct: 20
       };
 
-      let statusText = `Added ${ticker} with baseline values (no Finnhub API key entered).`;
+      let statusText = `Added ${ticker} with no API key (all fields set to N/A).`;
 
       if (apiKey) {
         el("statusMsg").textContent = `Auto-fetching quote & fundamentals for ${ticker}...`;
         try {
           const result = await fetchStockDataFromFinnhub(ticker, apiKey);
+          if (!result.hasValidQuote) {
+            el("statusMsg").textContent = `No quote found for ${ticker}`;
+            return;
+          }
           stockObj = result.stockObj;
           statusText = formatSyncStatus(ticker, result);
-        } catch (err) {
-          statusText = `Finnhub network error for ${ticker}: ${err.message}. Added with baseline values.`;
+        } catch {
+          el("statusMsg").textContent = `No quote found for ${ticker}`;
+          return;
         }
       }
 
@@ -1065,6 +1306,10 @@
       const s = getActiveStock();
       const apiKey = el("finnhubKey").value.trim();
       if (!s) return;
+      if (!TICKER_REGEX.test(s.ticker)) {
+        el("statusMsg").textContent = `Invalid ticker format: "${s.ticker}".`;
+        return;
+      }
       if (!apiKey) {
         el("statusMsg").textContent = "Enter a Finnhub API key at the top to auto-sync stock data.";
         return;
@@ -1096,6 +1341,10 @@
       const updated = [];
       let totalPulled = 0;
       for (const item of p.stocks) {
+        if (!TICKER_REGEX.test(item.ticker)) {
+          updated.push(item);
+          continue;
+        }
         try {
           const res = await fetchStockDataFromFinnhub(item.ticker, apiKey, item);
           updated.push(res.stockObj);
@@ -1115,32 +1364,98 @@
       if (e.key === "Enter") addStockToPortfolio();
     });
 
+    function getMissingFieldsList(s) {
+      const missing = [];
+      if (!isFiniteNum(s.price)) missing.push("price");
+      if (!isFiniteNum(s.pivotPrice)) missing.push("pivotPrice");
+      if (!isFiniteNum(s.qEps)) missing.push("qEps");
+      if (!isFiniteNum(s.aEps)) missing.push("aEps");
+      if (!isFiniteNum(s.roe)) missing.push("roe");
+      if (!isFiniteNum(s.volSurge)) missing.push("volSurge");
+      if (!isFiniteNum(s.rsRating)) missing.push("rsRating");
+      if (!s.instSponsorship || s.instSponsorship === "unknown") missing.push("instSponsorship");
+      return missing;
+    }
+
     function computeStockSignal(s) {
+      const p = getActivePortfolio();
+      const mTrend = (p && p.marketTrend) || "choppy";
       if (!s) return { color: "yellow", title: "NO STOCK SELECTED", score: 0, checks: [] };
 
+      const priceOk = isFiniteNum(s.price);
+      const qEpsOk = isFiniteNum(s.qEps);
+      const aEpsOk = isFiniteNum(s.aEps);
+      const roeOk = isFiniteNum(s.roe);
+      const volOk = isFiniteNum(s.volSurge);
+      const rsOk = isFiniteNum(s.rsRating);
+      const instOk = s.instSponsorship && s.instSponsorship !== "unknown";
+
       const checks = [
-        { name: "Price Floor (O'Neil >= $15 Institutional Minimum)", status: s.price >= 15 ? "pass" : "fail", detail: `$${s.price.toFixed(2)}` },
-        { name: "C — Current Quarterly EPS Growth (>= 25% YoY)", status: s.qEps >= 25 ? "pass" : (s.qEps >= 12 ? "warn" : "fail"), detail: `${s.qEps.toFixed(1)}%` },
-        { name: "A — Annual 3-Yr EPS (>= 25%) & ROE (>= 17%)", status: (s.aEps >= 25 && s.roe >= 17) ? "pass" : ((s.aEps >= 15 || s.roe >= 17) ? "warn" : "fail"), detail: `EPS ${s.aEps.toFixed(1)}% | ROE ${s.roe.toFixed(1)}%` },
-        { name: "N — Chart Breakout Timing (0% to +5% of Pivot)", status: s.chartSetup === "breakout" ? "pass" : (s.chartSetup === "building" ? "warn" : "fail"), detail: s.chartSetup.toUpperCase() },
-        { name: "S — Breakout Volume Surge (>= +40% vs Avg)", status: s.volSurge >= 40 ? "pass" : (s.volSurge >= 10 ? "warn" : "fail"), detail: `${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%` },
-        { name: "L & I — Leader RS (>= 80) & Institutional Backing", status: (s.rsRating >= 80 && s.instSponsorship === "strong") ? "pass" : (s.rsRating >= 70 ? "warn" : "fail"), detail: `RS ${s.rsRating} | ${s.instSponsorship}` },
-        { name: "M — General Market Direction", status: s.marketTrend === "uptrend" ? "pass" : (s.marketTrend === "choppy" ? "warn" : "fail"), detail: s.marketTrend.toUpperCase() }
+        {
+          name: "Price Floor (O'Neil >= $15 Institutional Minimum)",
+          status: !priceOk ? "na" : (s.price >= 15 ? "pass" : "fail"),
+          detail: priceOk ? `$${s.price.toFixed(2)}` : "N/A"
+        },
+        {
+          name: "C — Current Quarterly EPS Growth (>= 25% YoY)",
+          status: !qEpsOk ? "na" : (s.qEps >= 25 ? "pass" : (s.qEps >= 12 ? "warn" : "fail")),
+          detail: qEpsOk ? `${s.qEps.toFixed(1)}%` : "N/A"
+        },
+        {
+          name: "A — Annual 3-Yr EPS (>= 25%) & ROE (>= 17%)",
+          status: (!aEpsOk && !roeOk) ? "na" : ((!aEpsOk || !roeOk) ? "warn" : ((s.aEps >= 25 && s.roe >= 17) ? "pass" : ((s.aEps >= 15 || s.roe >= 17) ? "warn" : "fail"))),
+          detail: `EPS ${aEpsOk ? `${s.aEps.toFixed(1)}%` : "N/A"} | ROE ${roeOk ? `${s.roe.toFixed(1)}%` : "N/A"}`
+        },
+        {
+          name: "N — Chart Breakout Timing (0% to +5% of Pivot)",
+          status: (!priceOk || !isFiniteNum(s.pivotPrice)) ? "na" : (s.chartSetup === "breakout" ? "pass" : (s.chartSetup === "building" ? "warn" : "fail")),
+          detail: (!priceOk || !isFiniteNum(s.pivotPrice)) ? "N/A" : String(s.chartSetup || "building").toUpperCase()
+        },
+        {
+          name: "S — Breakout Volume Surge (>= +40% vs Avg)",
+          status: !volOk ? "na" : (s.volSurge >= 40 ? "pass" : (s.volSurge >= 10 ? "warn" : "fail")),
+          detail: volOk ? `${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%` : "N/A"
+        },
+        {
+          name: "L & I — Leader RS (>= 80) & Institutional Backing",
+          status: (!rsOk && !instOk) ? "na" : ((!rsOk || !instOk) ? "warn" : ((s.rsRating >= 80 && s.instSponsorship === "strong") ? "pass" : (s.rsRating >= 70 ? "warn" : "fail"))),
+          detail: `RS ${rsOk ? s.rsRating : "N/A"} | ${instOk ? s.instSponsorship : "N/A"}`
+        },
+        {
+          name: "M — General Market Direction",
+          status: mTrend === "uptrend" ? "pass" : (mTrend === "choppy" ? "warn" : "fail"),
+          detail: mTrend.toUpperCase()
+        }
       ];
 
       let score = 0;
       checks.forEach((c) => {
-        if (c.status === "pass") score += 14.3;
+        if (c.status === "na") score += 0;
+        else if (c.status === "pass") score += 14.3;
         else if (c.status === "warn") score += 7;
       });
       score = Math.min(100, Math.round(score));
 
+      const missingFields = getMissingFieldsList(s);
+      const hasNulls = missingFields.length > 0;
+
+      const aPass = aEpsOk && roeOk && s.aEps >= 25 && s.roe >= 17;
+      const iPass = instOk && s.instSponsorship === "strong";
+
+      const hardRed = (priceOk && s.price < 15) || (qEpsOk && s.qEps < 10) || s.chartSetup === "downtrend" || s.instSponsorship === "weak";
+      const nonAOrIMet = (
+        mTrend === "uptrend" &&
+        s.chartSetup === "breakout" &&
+        priceOk && s.price >= 15 &&
+        qEpsOk && s.qEps >= 25 &&
+        volOk && s.volSurge >= 40 &&
+        rsOk && s.rsRating >= 80
+      );
+      const allGreen = !hasNulls && nonAOrIMet && aPass && iPass;
+
       let color = "yellow";
       let title = "YELLOW — WATCHLIST / HOLD & WAIT";
       let desc = "Solid underlying traits, but either the general market is not in a confirmed uptrend or the stock has not yet flashed a high-volume breakout pivot.";
-
-      const hardRed = s.price < 15 || s.qEps < 10 || s.chartSetup === "downtrend" || s.instSponsorship === "weak";
-      const allGreen = (s.marketTrend === "uptrend" && s.chartSetup === "breakout" && s.price >= 15 && s.qEps >= 25 && s.volSurge >= 40 && s.rsRating >= 80);
 
       if (hardRed) {
         color = "red";
@@ -1149,8 +1464,19 @@
       } else if (allGreen) {
         color = "green";
         title = "GREEN — BUY BREAKOUT (WITH 7.5% STOP)";
-        desc = "Confirmed market uptrend + strong quarterly EPS growth + high-volume breakout near pivot. Enter position and place an immediate -7.5% stop-loss.";
-      } else if (s.marketTrend === "correction") {
+        desc = "Confirmed market uptrend + strong quarterly & annual EPS growth + strong ROE + high-volume breakout near pivot + strong institutional sponsorship (A & I confirmed). Enter position and place an immediate -7.5% stop-loss.";
+      } else if (hasNulls) {
+        color = "yellow";
+        title = "YELLOW — INCOMPLETE DATA / WATCHLIST";
+        desc = `Incomplete data: ${missingFields.join(", ")}`;
+      } else if (nonAOrIMet && (!aPass || !iPass)) {
+        const missingLetters = [];
+        if (!aPass) missingLetters.push("A");
+        if (!iPass) missingLetters.push("I");
+        color = "yellow";
+        title = "YELLOW — MISSING A OR I CRITERIA";
+        desc = `Core price, C, N, S, L, and M conditions pass, but missing ${missingLetters.join(" and ")} requirements (Annual EPS >= 25% & ROE >= 17% for A; strong institutional sponsorship for I).`;
+      } else if (mTrend === "correction") {
         color = "yellow";
         title = "YELLOW — MARKET IN CORRECTION (HOLD CASH)";
         desc = "Even strong leaders fail during market corrections. Keep on watchlist and wait for a market Follow-Through Day.";
@@ -1184,28 +1510,33 @@
       el("signalTitle").textContent = res.title;
       el("signalDesc").textContent = res.desc;
 
-      const portCapital = p.capital || 50000;
-      const alloc = (s.allocPct || 20) / 100;
+      const portCapital = isFiniteNum(p.capital) ? p.capital : 0;
+      const allocPct = isFiniteNum(s.allocPct) ? s.allocPct : 0;
+      const alloc = allocPct / 100;
       const dollars = portCapital * alloc;
-      const shares = s.price > 0 ? Math.floor(dollars / s.price) : 0;
-      const actualCost = shares * s.price;
-      const stop = s.price * 0.925;
-      const t20 = s.price * 1.20;
-      const t25 = s.price * 1.25;
+      const hasPrice = isFiniteNum(s.price) && s.price > 0;
+      const shares = hasPrice ? Math.floor(dollars / s.price) : 0;
+      const actualCost = hasPrice ? shares * s.price : 0;
+      const stop = hasPrice ? s.price * 0.925 : null;
+      const t20 = hasPrice ? s.price * 1.20 : null;
+      const t25 = hasPrice ? s.price * 1.25 : null;
 
       el("posShares").textContent = `${shares} sh ($${actualCost.toLocaleString(undefined, { maximumFractionDigits: 0 })})`;
-      el("stopPrice").textContent = `$${stop.toFixed(2)}`;
-      el("targetPrice").textContent = `$${t20.toFixed(2)} – $${t25.toFixed(2)}`;
+      el("stopPrice").textContent = stop !== null ? `$${stop.toFixed(2)}` : "N/A";
+      el("targetPrice").textContent = (t20 !== null && t25 !== null) ? `$${t20.toFixed(2)} – $${t25.toFixed(2)}` : "N/A";
 
       const list = el("checklist");
       list.innerHTML = "";
       res.checks.forEach((c) => {
         const row = document.createElement("div");
         row.className = "check-item";
-        row.innerHTML = `
-          <span>${c.name}</span>
-          <span class="pill ${c.status}">${c.status.toUpperCase()} (${c.detail})</span>
-        `;
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = c.name;
+        const pillSpan = document.createElement("span");
+        pillSpan.className = `pill ${c.status}`;
+        pillSpan.textContent = `${c.status.toUpperCase()} (${c.detail})`;
+        row.appendChild(nameSpan);
+        row.appendChild(pillSpan);
         list.appendChild(row);
       });
 
@@ -1213,140 +1544,177 @@
     }
 
     function updateCharts(s, stop, t20, t25) {
-      const norm = (val, target) => Math.max(0, Math.min(120, Math.round((val / target) * 100)));
-      const radarData = [
-        norm(s.qEps, 25),
-        norm(s.aEps, 25),
-        norm(s.roe, 17),
-        norm(s.volSurge + 50, 90),
-        norm(s.rsRating, 85),
-        s.price >= 15 ? 100 : Math.round((s.price / 15) * 100)
-      ];
+      try {
+        if (typeof Chart === "undefined") return;
+        const norm = (val, target) => {
+          if (!isFiniteNum(val)) return 0;
+          return Math.max(0, Math.min(120, Math.round((val / target) * 100)));
+        };
+        const radarData = [
+          norm(s.qEps, 25),
+          norm(s.aEps, 25),
+          norm(s.roe, 17),
+          isFiniteNum(s.volSurge) ? norm(s.volSurge + 50, 90) : 0,
+          norm(s.rsRating, 85),
+          isFiniteNum(s.price) ? (s.price >= 15 ? 100 : Math.round((s.price / 15) * 100)) : 0
+        ];
 
-      if (radarChartInstance) radarChartInstance.destroy();
-      radarChartInstance = new Chart(el("radarChart"), {
-        type: "radar",
-        data: {
-          labels: ["Qtr EPS (25%+)", "Annual EPS (25%+)", "ROE (17%+)", "Vol Surge (+40%)", "RS Rating (85+)", "Price >= $15"],
-          datasets: [
-            {
-              label: `${s.ticker} vs O'Neil Benchmark (%)`,
-              data: radarData,
-              backgroundColor: "rgba(56, 189, 248, 0.22)",
-              borderColor: "#38bdf8",
-              pointBackgroundColor: "#38bdf8"
+        if (radarChartInstance) radarChartInstance.destroy();
+        radarChartInstance = new Chart(el("radarChart"), {
+          type: "radar",
+          data: {
+            labels: ["Qtr EPS (25%+)", "Annual EPS (25%+)", "ROE (17%+)", "Vol Surge (+40%)", "RS Rating (85+)", "Price >= $15"],
+            datasets: [
+              {
+                label: `${s.ticker} vs O'Neil Benchmark (%)`,
+                data: radarData,
+                backgroundColor: "rgba(56, 189, 248, 0.22)",
+                borderColor: "#38bdf8",
+                pointBackgroundColor: "#38bdf8"
+              },
+              {
+                label: "O'Neil Minimum Threshold (100%)",
+                data: [100, 100, 100, 100, 100, 100],
+                backgroundColor: "rgba(16, 185, 129, 0.06)",
+                borderColor: "#10b981",
+                borderDash: [5, 5],
+                pointRadius: 0
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              r: {
+                min: 0, max: 120,
+                ticks: { display: false },
+                grid: { color: "#334155" },
+                angleLines: { color: "#334155" },
+                pointLabels: { color: "#cbd5e1", font: { size: 11 } }
+              }
             },
-            {
-              label: "O'Neil Minimum Threshold (100%)",
-              data: [100, 100, 100, 100, 100, 100],
-              backgroundColor: "rgba(16, 185, 129, 0.06)",
-              borderColor: "#10b981",
-              borderDash: [5, 5],
-              pointRadius: 0
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            r: {
-              min: 0, max: 120,
-              ticks: { display: false },
-              grid: { color: "#334155" },
-              angleLines: { color: "#334155" },
-              pointLabels: { color: "#cbd5e1", font: { size: 11 } }
-            }
-          },
-          plugins: { legend: { labels: { color: "#e2e8f0", font: { size: 11 } } } }
-        }
-      });
-
-      if (riskChartInstance) riskChartInstance.destroy();
-      riskChartInstance = new Chart(el("riskChart"), {
-        type: "bar",
-        data: {
-          labels: ["Hard Stop (-7.5%)", "Current Price", "Pivot / High", "Target (+20%)", "Stretch (+25%)"],
-          datasets: [{
-            label: "3:1 Reward-to-Risk Price Levels ($)",
-            data: [stop, s.price, s.pivotPrice, t20, t25].map((v) => Number(v.toFixed(2))),
-            backgroundColor: ["#ef4444", "#38bdf8", "#f59e0b", "#10b981", "#059669"],
-            borderRadius: 6
-          }]
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { grid: { color: "#334155" }, ticks: { color: "#cbd5e1" } },
-            y: { grid: { display: false }, ticks: { color: "#cbd5e1", font: { size: 11 } } }
-          },
-          plugins: {
-            legend: { display: false },
-            title: { display: true, text: `O'Neil Price & Risk Map for ${s.ticker} ($)`, color: "#e2e8f0", font: { size: 12 } }
+            plugins: { legend: { labels: { color: "#e2e8f0", font: { size: 11 } } } }
           }
-        }
-      });
+        });
+
+        if (riskChartInstance) riskChartInstance.destroy();
+        const riskVals = [
+          isFiniteNum(stop) ? Number(stop.toFixed(2)) : 0,
+          isFiniteNum(s.price) ? Number(s.price.toFixed(2)) : 0,
+          isFiniteNum(s.pivotPrice) ? Number(s.pivotPrice.toFixed(2)) : 0,
+          isFiniteNum(t20) ? Number(t20.toFixed(2)) : 0,
+          isFiniteNum(t25) ? Number(t25.toFixed(2)) : 0
+        ];
+        riskChartInstance = new Chart(el("riskChart"), {
+          type: "bar",
+          data: {
+            labels: ["Hard Stop (-7.5%)", "Current Price", "Pivot / High", "Target (+20%)", "Stretch (+25%)"],
+            datasets: [{
+              label: "3:1 Reward-to-Risk Price Levels ($)",
+              data: riskVals,
+              backgroundColor: ["#ef4444", "#38bdf8", "#f59e0b", "#10b981", "#059669"],
+              borderRadius: 6
+            }]
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { grid: { color: "#334155" }, ticks: { color: "#cbd5e1" } },
+              y: { grid: { display: false }, ticks: { color: "#cbd5e1", font: { size: 11 } } }
+            },
+            plugins: {
+              legend: { display: false },
+              title: { display: true, text: `O'Neil Price & Risk Map for ${s.ticker} ($)`, color: "#e2e8f0", font: { size: 12 } }
+            }
+          }
+        });
+      } catch {
+        // Ignore chart rendering failures when Chart.js is unavailable or blocked
+      }
+    }
+
+    function computeAverageNonNull(stocks, key) {
+      const vals = stocks.map((s) => s[key]).filter((v) => isFiniteNum(v));
+      if (vals.length === 0) return null;
+      return vals.reduce((acc, v) => acc + v, 0) / vals.length;
     }
 
     function updatePortfolioAnalysis() {
       const p = getActivePortfolio();
+      const cap = p && isFiniteNum(p.capital) ? p.capital : 0;
+
       if (!p || !p.stocks || p.stocks.length === 0) {
         el("portfolioScoreBadge").textContent = "Overall Health: No Stocks";
-        el("portAvgQeps").textContent = "0%";
-        el("portAvgRoe").textContent = "0%";
-        el("portAvgRs").textContent = "0";
-        el("portAllocatedCapital").textContent = `$0 / $${(p ? p.capital : 50000).toLocaleString()}`;
+        el("portAvgQeps").textContent = "--";
+        el("portAvgRoe").textContent = "--";
+        el("portAvgRs").textContent = "--";
+        el("portAllocatedCapital").textContent = `$0 / $${cap.toLocaleString()}`;
         el("portTotalRisk").textContent = "$0";
         el("portAnalysisSummary").textContent = "This portfolio currently has no open positions or watchlisted stocks. Add stocks to generate portfolio-wide CAN SLIM metrics.";
         return;
       }
 
-      let totalQeps = 0;
-      let totalRoe = 0;
-      let totalRs = 0;
       let totalAllocPct = 0;
       let totalMaxLoss = 0;
 
-      p.stocks.forEach(s => {
-        totalQeps += s.qEps;
-        totalRoe += s.roe;
-        totalRs += s.rsRating;
-        totalAllocPct += (s.allocPct || 20);
-
-        const posDollars = p.capital * ((s.allocPct || 20) / 100);
+      p.stocks.forEach((s) => {
+        const allocVal = isFiniteNum(s.allocPct) ? s.allocPct : 0;
+        totalAllocPct += allocVal;
+        const posDollars = cap * (allocVal / 100);
         const maxLoss = posDollars * 0.075;
         totalMaxLoss += maxLoss;
       });
 
       const count = p.stocks.length;
-      const avgQeps = totalQeps / count;
-      const avgRoe = totalRoe / count;
-      const avgRs = totalRs / count;
+      const avgQeps = computeAverageNonNull(p.stocks, "qEps");
+      const avgRoe = computeAverageNonNull(p.stocks, "roe");
+      const avgRs = computeAverageNonNull(p.stocks, "rsRating");
 
-      el("portAvgQeps").textContent = `${avgQeps >= 0 ? '+' : ''}${avgQeps.toFixed(1)}%`;
-      el("portAvgQeps").style.color = avgQeps >= 25 ? 'var(--green)' : (avgQeps >= 15 ? 'var(--yellow)' : 'var(--red)');
+      if (avgQeps !== null) {
+        el("portAvgQeps").textContent = `${avgQeps >= 0 ? "+" : ""}${avgQeps.toFixed(1)}%`;
+        el("portAvgQeps").style.color = avgQeps >= 25 ? "var(--green)" : (avgQeps >= 15 ? "var(--yellow)" : "var(--red)");
+      } else {
+        el("portAvgQeps").textContent = "--";
+        el("portAvgQeps").style.color = "var(--muted)";
+      }
 
-      el("portAvgRoe").textContent = `${avgRoe.toFixed(1)}%`;
-      el("portAvgRoe").style.color = avgRoe >= 17 ? 'var(--green)' : 'var(--yellow)';
+      if (avgRoe !== null) {
+        el("portAvgRoe").textContent = `${avgRoe.toFixed(1)}%`;
+        el("portAvgRoe").style.color = avgRoe >= 17 ? "var(--green)" : "var(--yellow)";
+      } else {
+        el("portAvgRoe").textContent = "--";
+        el("portAvgRoe").style.color = "var(--muted)";
+      }
 
-      el("portAvgRs").textContent = avgRs.toFixed(0);
-      el("portAvgRs").style.color = avgRs >= 80 ? 'var(--green)' : (avgRs >= 70 ? 'var(--yellow)' : 'var(--red)');
+      if (avgRs !== null) {
+        el("portAvgRs").textContent = avgRs.toFixed(0);
+        el("portAvgRs").style.color = avgRs >= 80 ? "var(--green)" : (avgRs >= 70 ? "var(--yellow)" : "var(--red)");
+      } else {
+        el("portAvgRs").textContent = "--";
+        el("portAvgRs").style.color = "var(--muted)";
+      }
 
-      const allocatedDollars = (p.capital * totalAllocPct) / 100;
-      el("portAllocatedCapital").textContent = `$${allocatedDollars.toLocaleString(undefined, {maximumFractionDigits:0})} / $${p.capital.toLocaleString()}`;
-      el("portTotalRisk").textContent = `-$${totalMaxLoss.toLocaleString(undefined, {maximumFractionDigits:0})} (${(totalMaxLoss / p.capital * 100).toFixed(1)}% capital)`;
+      const allocatedDollars = (cap * totalAllocPct) / 100;
+      el("portAllocatedCapital").textContent = `$${allocatedDollars.toLocaleString(undefined, { maximumFractionDigits: 0 })} / $${cap.toLocaleString()}`;
+      const riskPctText = cap > 0 ? `${((totalMaxLoss / cap) * 100).toFixed(1)}% capital` : "0.0% capital";
+      el("portTotalRisk").textContent = `-$${totalMaxLoss.toLocaleString(undefined, { maximumFractionDigits: 0 })} (${riskPctText})`;
 
       let healthScore = 0;
-      if (avgQeps >= 25) healthScore += 35;
-      else if (avgQeps >= 15) healthScore += 20;
-
-      if (avgRoe >= 17) healthScore += 25;
-      else if (avgRoe >= 12) healthScore += 15;
-
-      if (avgRs >= 80) healthScore += 30;
-      else if (avgRs >= 70) healthScore += 15;
+      if (avgQeps !== null) {
+        if (avgQeps >= 25) healthScore += 35;
+        else if (avgQeps >= 15) healthScore += 20;
+      }
+      if (avgRoe !== null) {
+        if (avgRoe >= 17) healthScore += 25;
+        else if (avgRoe >= 12) healthScore += 15;
+      }
+      if (avgRs !== null) {
+        if (avgRs >= 80) healthScore += 30;
+        else if (avgRs >= 70) healthScore += 15;
+      }
 
       if (count >= 4 && count <= 8) healthScore += 10;
       else if (count > 8) healthScore -= 10;
@@ -1361,13 +1729,15 @@
       el("portfolioScoreBadge").textContent = `Overall Health: ${grade} (${healthScore}/100)`;
       el("portfolioScoreBadge").style.color = colorStyle;
 
-      let summaryText = `Portfolio "${p.name}" holds ${count} active stock(s) with an average quarterly EPS growth of ${avgQeps.toFixed(1)}% and an average RS rating of ${avgRs.toFixed(0)}. `;
+      const qText = avgQeps !== null ? `${avgQeps.toFixed(1)}%` : "--";
+      const rsText = avgRs !== null ? avgRs.toFixed(0) : "--";
+      let summaryText = `Portfolio "${p.name}" holds ${count} active stock(s) with an average quarterly EPS growth of ${qText} and an average RS rating of ${rsText}. `;
       if (count < 4) {
         summaryText += `O'Neil recommends holding 4 to 8 leading growth stocks to balance high return potential with adequate risk dispersion; you currently have ${count} stock(s). `;
       } else if (count > 8) {
         summaryText += `Warning: Holding ${count} stocks exceeds O'Neil's recommended maximum of 6-8 positions, which can dilute top winners. `;
       }
-      if (avgRs >= 80 && avgQeps >= 25) {
+      if (avgRs !== null && avgQeps !== null && avgRs >= 80 && avgQeps >= 25) {
         summaryText += `The portfolio exhibits strong institutional leadership characteristics aligned with CAN SLIM criteria. Ensure strict adherence to 7.5% stop-losses.`;
       } else {
         summaryText += `Some metrics fall below O'Neil's prime growth thresholds (EPS >= 25%, RS >= 80). Review individual stock scores to optimize leader quality.`;
@@ -1382,6 +1752,9 @@
       loadStockIntoForm(s);
       evaluateStock();
       updatePortfolioAnalysis();
+      if (startupLoadNotice) {
+        el("statusMsg").textContent = startupLoadNotice;
+      }
     }
 
     renderAll();
