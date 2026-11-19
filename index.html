@@ -46,9 +46,9 @@
     .top-control-bar {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px;
       padding: 16px; margin-bottom: 16px; display: grid;
-      grid-template-columns: 1.5fr 1fr 1fr auto; gap: 12px; align-items: end;
+      grid-template-columns: 1.4fr 1fr 1.2fr auto; gap: 12px; align-items: end;
     }
-    @media (max-width: 900px) { .top-control-bar { grid-template-columns: 1fr; } }
+    @media (max-width: 960px) { .top-control-bar { grid-template-columns: 1fr; } }
     .field-group label {
       display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; font-weight: 600;
     }
@@ -58,15 +58,15 @@
     }
     input:focus, select:focus { border-color: var(--accent); }
     .btn {
-      background: var(--accent); color: #0f172a; border: none; padding: 10px 16px;
-      border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem;
+      background: var(--accent); color: #0f172a; border: none; padding: 10px 15px;
+      border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.88rem;
       transition: opacity 0.15s; white-space: nowrap;
     }
     .btn:hover { opacity: 0.9; }
     .btn-secondary { background: #334155; color: var(--text); border: 1px solid #475569; }
     .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--red); border: 1px solid var(--red); }
     .status-msg {
-      grid-column: 1 / -1; font-size: 0.82rem; color: var(--accent); min-height: 18px; font-weight: 600;
+      grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); min-height: 18px;
     }
 
     /* Tabs Bar for Portfolios */
@@ -102,18 +102,25 @@
 
     /* Stock Management inside Portfolio */
     .stock-list-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;
     }
     .stock-cards-container {
       display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; margin-bottom: 16px; padding-right: 4px;
     }
     .stock-row-card {
       background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 12px;
-      display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.2fr auto; gap: 10px; align-items: center;
+      display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.1fr auto; gap: 10px; align-items: center;
       cursor: pointer; transition: border-color 0.15s;
     }
     .stock-row-card:hover, .stock-row-card.active { border-color: var(--accent); background: #131d35; }
     @media (max-width: 600px) { .stock-row-card { grid-template-columns: 1fr 1fr; } }
+
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%; display: inline-block;
+    }
+    .dot.green { background: var(--green); }
+    .dot.yellow { background: var(--yellow); }
+    .dot.red { background: var(--red); }
 
     .form-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
@@ -121,6 +128,9 @@
     @media (max-width: 540px) { .form-grid { grid-template-columns: 1fr; } }
 
     .field-group { margin-bottom: 10px; }
+    .helper-note {
+      font-size: 0.72rem; color: var(--muted); margin-top: 4px; line-height: 1.35;
+    }
 
     /* Traffic Light Banner */
     .signal-banner {
@@ -152,12 +162,12 @@
     /* Checklist */
     .checklist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
     .check-item {
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
       background: #0f172a; padding: 9px 12px; border-radius: 8px; font-size: 0.86rem;
       border: 1px solid var(--border);
     }
     .pill {
-      padding: 2px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+      padding: 2px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; white-space: nowrap;
     }
     .pill.pass { background: var(--green-bg); color: var(--green); }
     .pill.warn { background: var(--yellow-bg); color: var(--yellow); }
@@ -189,16 +199,16 @@
     <header>
       <div>
         <h1>CAN SLIM Multi-Portfolio Analyzer &amp; Signal Calculator</h1>
-        <p>Manage multiple stock portfolios with automated traffic-light signals inspired by William J. O&rsquo;Neil</p>
+        <p>Automated quote, fundamental, volume &amp; RS estimation via Finnhub with manual override controls</p>
       </div>
-      <div class="badge-book">Multi-Portfolio Support &bull; Live Finnhub Quotes</div>
+      <div class="badge-book">Auto-Sync Finnhub Engine &bull; Manual Override Supported</div>
     </header>
 
     <!-- Global API & Controls Bar -->
     <div class="top-control-bar">
       <div class="field-group">
-        <label for="finnhubKey">Finnhub.io Free API Key (Saved in Browser)</label>
-        <input type="password" id="finnhubKey" placeholder="Paste free API key for live quotes..." />
+        <label for="finnhubKey">Finnhub.io API Key (Saved in Browser)</label>
+        <input type="password" id="finnhubKey" placeholder="Paste Finnhub API key for auto-fetch..." />
       </div>
       <div class="field-group">
         <label for="portfolioCapital">Active Portfolio Total Capital ($)</label>
@@ -207,17 +217,19 @@
       <div class="field-group">
         <label for="newPortfolioName">Create New Portfolio</label>
         <div style="display:flex; gap:8px;">
-          <input type="text" id="newPortfolioName" placeholder="e.g. Growth Watchlist" />
+          <input type="text" id="newPortfolioName" placeholder="e.g. Core Leaders" />
           <button class="btn" id="createPortfolioBtn" type="button">+ Add</button>
         </div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-secondary" id="refreshAllBtn" type="button" title="Refresh all stocks in active portfolio from Finnhub">Refresh Portfolio</button>
         <button class="btn btn-danger" id="deletePortfolioBtn" type="button" title="Delete current portfolio">Delete Portfolio</button>
         <button class="btn btn-secondary" id="exportBtn" type="button" title="Export portfolios to JSON file">Export Data</button>
-        <button class="btn btn-secondary" id="importTriggerBtn" type="button" title="Import JSON backup">Import Data</button>
-        <input type="file" id="importFile" accept=".json,application/json" style="display:none;" />
+        <label class="btn btn-secondary" style="cursor:pointer; margin-bottom:0; display:inline-flex; align-items:center;">
+          Import Data <input type="file" id="importFile" accept=".json" style="display:none;" />
+        </label>
       </div>
-      <div class="status-msg" id="statusMsg">Ready. Switch or create portfolios below, add stocks, and fetch live quotes.</div>
+      <div class="status-msg" id="statusMsg">Ready. Add a ticker to auto-pull price, 52-week high/pivot, EPS, ROE, volume surge vs. average, and RS estimate.</div>
     </div>
 
     <!-- Portfolio Tabs Bar -->
@@ -233,15 +245,17 @@
 
         <!-- Quick Add / Fetch Ticker -->
         <div style="background:#0f172a; border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:14px;">
-          <label style="display:block; font-size:0.78rem; color:var(--muted); margin-bottom:5px; font-weight:600;">Add Stock to Active Portfolio</label>
+          <label style="display:block; font-size:0.78rem; color:var(--muted); margin-bottom:5px; font-weight:600;">Add &amp; Auto-Fetch Stock Data</label>
           <div style="display:flex; gap:8px;">
-            <input type="text" id="quickTicker" placeholder="e.g. AAPL, TSLA, NVDA" style="text-transform:uppercase;" />
+            <input type="text" id="quickTicker" placeholder="e.g. MSFT, TSM, J, NVDA" style="text-transform:uppercase;" />
             <button class="btn" id="addStockBtn" type="button">Fetch &amp; Add</button>
           </div>
+          <div class="helper-note">Auto-populates Price, 52-Wk High Pivot, Qtr/Annual EPS, ROE, Volume Surge % (from daily candles), and estimated RS (from 6-mo price performance).</div>
         </div>
 
         <div class="stock-list-header">
-          <span style="font-size:0.82rem; color:var(--muted); font-weight:600;">Click a stock to inspect &amp; edit parameters:</span>
+          <span style="font-size:0.82rem; color:var(--muted); font-weight:600;">Click a stock to inspect or manually override values:</span>
+          <button class="btn btn-secondary" id="refreshSelectedBtn" type="button" style="padding:5px 10px; font-size:0.76rem;">Sync Selected Ticker</button>
         </div>
 
         <div class="stock-cards-container" id="stockCardsContainer"></div>
@@ -255,22 +269,24 @@
 
           <div class="form-grid">
             <div class="field-group">
-              <label for="marketTrend">M &mdash; General Market Trend</label>
+              <label for="marketTrend">M &mdash; General Market Trend (Manual)</label>
               <select id="marketTrend">
                 <option value="uptrend">Confirmed Uptrend (Green)</option>
                 <option value="choppy" selected>Uptrend Under Pressure / Choppy</option>
                 <option value="correction">Market in Correction (4+ Dist. Days)</option>
               </select>
+              <div class="helper-note">Index trend judgment stays manual.</div>
             </div>
 
             <div class="field-group">
-              <label for="chartSetup">N &mdash; Chart Base &amp; Pivot Status</label>
+              <label for="chartSetup">N &mdash; Chart Base &amp; Pivot Status (Auto-Suggested)</label>
               <select id="chartSetup">
                 <option value="breakout">Proper Breakout (0% to +5% of Pivot)</option>
                 <option value="building" selected>Constructive Base Building (Wait)</option>
                 <option value="extended">Extended (&gt;5% Past Pivot - Do Not Chase)</option>
                 <option value="downtrend">Broken / Below Key Moving Averages</option>
               </select>
+              <div class="helper-note">Suggested automatically from Price vs. Pivot; override anytime.</div>
             </div>
 
             <div class="field-group">
@@ -300,12 +316,14 @@
 
             <div class="field-group">
               <label for="volSurge">S &mdash; Breakout Volume vs Avg (%)</label>
-              <input type="number" id="volSurge" step="1" value="0" />
+              <input type="number" id="volSurge" step="0.1" value="0" />
+              <div class="helper-note">Calculated from latest daily candle volume vs. prior ~30-day average when candle data is available.</div>
             </div>
 
             <div class="field-group">
               <label for="rsRating">L &mdash; Relative Strength Rating (1&ndash;99)</label>
               <input type="number" id="rsRating" min="1" max="99" value="50" />
+              <div class="helper-note">Estimated from ~6-month price trajectory when available; edit manually if desired.</div>
             </div>
 
             <div class="field-group">
@@ -375,10 +393,10 @@
     <!-- Portfolio-Wide Aggregated Analysis Card -->
     <div class="card" style="margin-top: 20px; grid-column: 1 / -1;">
       <h2>
-        <span>CAN SLIM Portfolio-Wide Analysis & Health Score</span>
+        <span>CAN SLIM Portfolio-Wide Analysis &amp; Health Score</span>
         <span id="portfolioScoreBadge" style="font-size:0.85rem; color:var(--accent);">Overall Health: --</span>
       </h2>
-      
+
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px;">
         <div class="metric-box">
           <span>Avg. Quarterly EPS Growth</span>
@@ -403,7 +421,7 @@
       </div>
 
       <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 14px;">
-        <strong style="font-size: 0.9rem; color: var(--accent); display: block; margin-bottom: 6px;">Portfolio Structure & O'Neil Compliance Review:</strong>
+        <strong style="font-size: 0.9rem; color: var(--accent); display: block; margin-bottom: 6px;">Portfolio Structure &amp; O&rsquo;Neil Compliance Review:</strong>
         <p id="portAnalysisSummary" style="font-size: 0.86rem; color: var(--muted); line-height: 1.5;">
           Select or populate a portfolio to analyze aggregate growth momentum, sector concentration, and risk exposure.
         </p>
@@ -411,7 +429,7 @@
     </div>
 
     <footer>
-      CAN SLIM Multi-Portfolio Analyzer &bull; Inspired by <em>The Successful Investor</em> by William J. O&rsquo;Neil. Not financial advice.
+      CAN SLIM Multi-Portfolio Analyzer &bull; Automated metrics are estimates from API data and should be verified on a chart before trading. Not financial advice.
     </footer>
   </div>
 
@@ -422,16 +440,16 @@
         name: "Tech Growth Portfolio",
         capital: 50000,
         stocks: [
-          { ticker: "NVDA", marketTrend: "choppy", chartSetup: "building", price: 162.85, pivotPrice: 165.00, qEps: 129.0, aEps: 210.0, roe: 110.0, volSurge: 10, rsRating: 88, instSponsorship: "strong", allocPct: 20 },
-          { ticker: "MSFT", marketTrend: "choppy", chartSetup: "building", price: 523.50, pivotPrice: 540.00, qEps: 32.2, aEps: 23.0, roe: 35.5, volSurge: 15, rsRating: 84, instSponsorship: "strong", allocPct: 20 }
+          { ticker: "MSFT", marketTrend: "choppy", chartSetup: "building", price: 508.29, pivotPrice: 559.15, qEps: 32.37, aEps: 22.83, roe: 33.21, volSurge: 15, rsRating: 80, instSponsorship: "strong", allocPct: 20 },
+          { ticker: "TSM", marketTrend: "choppy", chartSetup: "building", price: 362.62, pivotPrice: 487.47, qEps: 35.0, aEps: 26.0, roe: 28.0, volSurge: 12, rsRating: 84, instSponsorship: "strong", allocPct: 20 }
         ]
       },
       {
         id: "defensive-income",
-        name: "Defensive & Value Watchlist",
+        name: "Core Watchlist",
         capital: 30000,
         stocks: [
-          { ticker: "JNJ", marketTrend: "choppy", chartSetup: "building", price: 286.00, pivotPrice: 290.00, qEps: -2.0, aEps: 17.7, roe: 24.0, volSurge: 0, rsRating: 65, instSponsorship: "moderate", allocPct: 25 }
+          { ticker: "J", marketTrend: "choppy", chartSetup: "building", price: 158.23, pivotPrice: 162.00, qEps: -22.95, aEps: 14.0, roe: 18.5, volSurge: 5, rsRating: 75, instSponsorship: "strong", allocPct: 20 }
         ]
       }
     ];
@@ -465,11 +483,6 @@
       el("statusMsg").textContent = "Portfolios exported successfully to JSON backup.";
     });
 
-    // Robust Import Trigger & Handler
-    el("importTriggerBtn").addEventListener("click", () => {
-      el("importFile").click();
-    });
-
     el("importFile").addEventListener("change", (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -478,27 +491,18 @@
         try {
           const imported = JSON.parse(e.target.result);
           if (Array.isArray(imported) && imported.length > 0) {
-            // Validate basic structure of imported portfolios
-            const valid = imported.every(p => p.id && p.name && Array.isArray(p.stocks));
-            if (!valid) {
-              throw new Error("JSON structure does not match expected multi-portfolio schema.");
-            }
             portfolios = imported;
             activePortfolioId = portfolios[0].id;
             activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
             saveState();
             renderAll();
-            el("statusMsg").textContent = "Portfolios imported successfully from JSON backup!";
+            el("statusMsg").textContent = "Portfolios imported successfully!";
           } else {
-            alert("Invalid portfolio file format: Root must be a non-empty array.");
+            alert("Invalid portfolio file format.");
           }
         } catch (err) {
           alert("Error parsing JSON file: " + err.message);
-          el("statusMsg").textContent = "Import failed: " + err.message;
         }
-      };
-      reader.onerror = function() {
-        alert("Error reading file.");
       };
       reader.readAsText(file);
       event.target.value = "";
@@ -594,9 +598,9 @@
         card.innerHTML = `
           <div>
             <strong style="font-size:1rem; display:flex; align-items:center; gap:6px;">
-              <span>${s.ticker}</span>
+              <span class="dot ${color}"></span>${s.ticker}
             </strong>
-            <span style="font-size:0.75rem; color:var(--muted);">Pivot: $${s.pivotPrice.toFixed(2)}</span>
+            <span style="font-size:0.75rem; color:var(--muted);">Pivot: $${s.pivotPrice.toFixed(2)} | Vol: ${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%</span>
           </div>
           <div>
             <span style="font-size:0.72rem; color:var(--muted);">Price</span>
@@ -607,8 +611,8 @@
             <strong style="font-size:0.9rem; color:${s.qEps >= 25 ? 'var(--green)' : (s.qEps >= 12 ? 'var(--yellow)' : 'var(--red)')};">${s.qEps >= 0 ? '+' : ''}${s.qEps}%</strong>
           </div>
           <div>
-            <span style="font-size:0.72rem; color:var(--muted);">Weight</span>
-            <strong style="font-size:0.9rem;">${s.allocPct}%</strong>
+            <span style="font-size:0.72rem; color:var(--muted);">RS / Weight</span>
+            <strong style="font-size:0.9rem;">RS ${s.rsRating} &bull; ${s.allocPct}%</strong>
           </div>
           <div>
             <span class="pill ${color === 'green' ? 'pass' : (color === 'yellow' ? 'warn' : 'fail')}">${color.toUpperCase()}</span>
@@ -679,6 +683,110 @@
       el("statusMsg").textContent = "Stock removed from portfolio.";
     });
 
+    function suggestChartSetup(price, pivot) {
+      if (!price || !pivot || pivot <= 0) return "building";
+      const ratio = (price - pivot) / pivot;
+      if (ratio >= 0 && ratio <= 0.05) return "breakout";
+      if (ratio > 0.05) return "extended";
+      return "building";
+    }
+
+    // Fetch live quote, fundamentals, candle volume surge, and ~6-month RS estimate
+    async function fetchStockDataFromFinnhub(ticker, apiKey, existingStock = null) {
+      const base = existingStock ? { ...existingStock, ticker } : {
+        ticker,
+        marketTrend: "choppy",
+        chartSetup: "building",
+        price: 100.00,
+        pivotPrice: 105.00,
+        qEps: 25.0,
+        aEps: 20.0,
+        roe: 18.0,
+        volSurge: 15,
+        rsRating: 80,
+        instSponsorship: "strong",
+        allocPct: 20
+      };
+
+      const nowSec = Math.floor(Date.now() / 1000);
+      const sixMonthsAgoSec = nowSec - (200 * 24 * 60 * 60);
+
+      const [quoteRes, metricRes, candleRes] = await Promise.all([
+        fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${encodeURIComponent(apiKey)}`),
+        fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${encodeURIComponent(apiKey)}`),
+        fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(ticker)}&resolution=D&from=${sixMonthsAgoSec}&to=${nowSec}&token=${encodeURIComponent(apiKey)}`)
+      ]);
+
+      let fetchedCount = 0;
+
+      if (quoteRes.ok) {
+        const quote = await quoteRes.json();
+        if (quote && typeof quote.c === "number" && quote.c > 0) {
+          base.price = Number(quote.c.toFixed(2));
+          fetchedCount++;
+        }
+      }
+
+      if (metricRes.ok) {
+        const metricData = await metricRes.json();
+        const m = metricData.metric || {};
+        if (typeof m["52WeekHigh"] === "number" && m["52WeekHigh"] > 0) {
+          base.pivotPrice = Number(m["52WeekHigh"].toFixed(2));
+          fetchedCount++;
+        }
+        const qGrowth = m.epsGrowthQuarterlyYoy ?? m.quarterlyEarningsGrowthYoy ?? m.epsGrowthTTMYoy;
+        if (typeof qGrowth === "number" && Number.isFinite(qGrowth)) {
+          base.qEps = Number(qGrowth.toFixed(2));
+          fetchedCount++;
+        }
+        const aGrowth = m.epsGrowth3Y ?? m.epsGrowth5Y ?? m.epsGrowthAnnual;
+        if (typeof aGrowth === "number" && Number.isFinite(aGrowth)) {
+          base.aEps = Number(aGrowth.toFixed(2));
+          fetchedCount++;
+        }
+        const roeVal = m.roeTTM ?? m.roeRfy;
+        if (typeof roeVal === "number" && Number.isFinite(roeVal)) {
+          base.roe = Number(roeVal.toFixed(2));
+          fetchedCount++;
+        }
+      }
+
+      // Compute volume surge vs prior 30-day average and rough RS from daily candles when accessible
+      if (candleRes.ok) {
+        const candles = await candleRes.json();
+        if (candles && candles.s === "ok" && Array.isArray(candles.v) && candles.v.length >= 5) {
+          const vols = candles.v;
+          const latestVol = vols[vols.length - 1];
+          const lookbackSlice = vols.slice(Math.max(0, vols.length - 31), vols.length - 1);
+          if (lookbackSlice.length > 0) {
+            const avgVol = lookbackSlice.reduce((acc, v) => acc + v, 0) / lookbackSlice.length;
+            if (avgVol > 0 && typeof latestVol === "number") {
+              const surgePct = ((latestVol - avgVol) / avgVol) * 100;
+              base.volSurge = Number(surgePct.toFixed(1));
+              fetchedCount++;
+            }
+          }
+
+          if (Array.isArray(candles.c) && candles.c.length >= 20) {
+            const closes = candles.c;
+            const startIdx = Math.max(0, closes.length - 126); // ~6 trading months
+            const startPrice = closes[startIdx];
+            const endPrice = closes[closes.length - 1];
+            if (startPrice > 0 && endPrice > 0) {
+              const sixMoReturnPct = ((endPrice - startPrice) / startPrice) * 100;
+              // Map roughly -25%..+60% 6-month move into a 1..99 RS estimate
+              const estRs = Math.max(1, Math.min(99, Math.round(50 + sixMoReturnPct * 1.1)));
+              base.rsRating = estRs;
+              fetchedCount++;
+            }
+          }
+        }
+      }
+
+      base.chartSetup = suggestChartSetup(base.price, base.pivotPrice);
+      return { stockObj: base, fetchedCount };
+    }
+
     async function addStockToPortfolio() {
       const ticker = el("quickTicker").value.trim().toUpperCase();
       if (!ticker) return;
@@ -691,9 +799,9 @@
         chartSetup: "building",
         price: 100.00,
         pivotPrice: 105.00,
-        qEps: 30.0,
-        aEps: 25.0,
-        roe: 20.0,
+        qEps: 25.0,
+        aEps: 20.0,
+        roe: 18.0,
         volSurge: 15,
         rsRating: 80,
         instSponsorship: "strong",
@@ -701,27 +809,15 @@
       };
 
       if (!apiKey) {
-        el("statusMsg").textContent = `Added ${ticker} with default placeholder metrics (No Finnhub key provided). Edit metrics below.`;
+        el("statusMsg").textContent = `Added ${ticker} with baseline values (no Finnhub API key entered). Paste a key above for automatic data pulls.`;
       } else {
-        el("statusMsg").textContent = `Fetching live metrics for ${ticker} from Finnhub...`;
+        el("statusMsg").textContent = `Auto-fetching quote, fundamentals, volume surge, and RS estimate for ${ticker}...`;
         try {
-          const [quoteRes, metricRes] = await Promise.all([
-            fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${encodeURIComponent(apiKey)}`),
-            fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${encodeURIComponent(apiKey)}`)
-          ]);
-          if (quoteRes.ok && metricRes.ok) {
-            const quote = await quoteRes.json();
-            const metricData = await metricRes.json();
-            const m = metricData.metric || {};
-            if (quote.c && quote.c > 0) stockObj.price = Number(quote.c);
-            if (m["52WeekHigh"]) stockObj.pivotPrice = Number(m["52WeekHigh"]);
-            if (typeof m.epsGrowthQuarterlyYoy === "number") stockObj.qEps = m.epsGrowthQuarterlyYoy;
-            if (typeof m.epsGrowth3Y === "number") stockObj.aEps = m.epsGrowth3Y;
-            if (typeof m.roeTTM === "number") stockObj.roe = m.roeTTM;
-            el("statusMsg").textContent = `Successfully fetched live quote for ${ticker}!`;
-          }
+          const result = await fetchStockDataFromFinnhub(ticker, apiKey);
+          stockObj = result.stockObj;
+          el("statusMsg").textContent = `Synced ${ticker} (${result.fetchedCount} automated data points pulled). You can manually adjust any field below.`;
         } catch (err) {
-          el("statusMsg").textContent = `Finnhub fetch warning (${err.message}). Added ${ticker} with editable baseline values.`;
+          el("statusMsg").textContent = `Finnhub fetch issue for ${ticker} (${err.message}). Added with baseline values for manual editing.`;
         }
       }
 
@@ -732,6 +828,51 @@
       saveState();
       renderAll();
     }
+
+    el("refreshSelectedBtn").addEventListener("click", async () => {
+      const s = getActiveStock();
+      const apiKey = el("finnhubKey").value.trim();
+      if (!s) return;
+      if (!apiKey) {
+        el("statusMsg").textContent = "Enter a Finnhub API key at the top to auto-sync stock data.";
+        return;
+      }
+      el("statusMsg").textContent = `Refreshing ${s.ticker} from Finnhub...`;
+      try {
+        const result = await fetchStockDataFromFinnhub(s.ticker, apiKey, s);
+        const p = getActivePortfolio();
+        p.stocks = p.stocks.map((item) => item.ticker === s.ticker ? result.stockObj : item);
+        saveState();
+        renderAll();
+        el("statusMsg").textContent = `Updated ${s.ticker} (${result.fetchedCount} automated metrics refreshed).`;
+      } catch (err) {
+        el("statusMsg").textContent = `Could not refresh ${s.ticker}: ${err.message}`;
+      }
+    });
+
+    el("refreshAllBtn").addEventListener("click", async () => {
+      const p = getActivePortfolio();
+      const apiKey = el("finnhubKey").value.trim();
+      if (!p || !p.stocks.length) return;
+      if (!apiKey) {
+        el("statusMsg").textContent = "Enter a Finnhub API key at the top to auto-refresh your portfolio.";
+        return;
+      }
+      el("statusMsg").textContent = `Refreshing ${p.stocks.length} stock(s) in "${p.name}"...`;
+      const updated = [];
+      for (const item of p.stocks) {
+        try {
+          const res = await fetchStockDataFromFinnhub(item.ticker, apiKey, item);
+          updated.push(res.stockObj);
+        } catch {
+          updated.push(item);
+        }
+      }
+      p.stocks = updated;
+      saveState();
+      renderAll();
+      el("statusMsg").textContent = `Portfolio "${p.name}" auto-refresh completed.`;
+    });
 
     el("addStockBtn").addEventListener("click", addStockToPortfolio);
     el("quickTicker").addEventListener("keydown", (e) => {
@@ -917,7 +1058,6 @@
       const p = getActivePortfolio();
       if (!p || !p.stocks || p.stocks.length === 0) {
         el("portfolioScoreBadge").textContent = "Overall Health: No Stocks";
-        el("portfolioScoreBadge").style.color = "var(--muted)";
         el("portAvgQeps").textContent = "0%";
         el("portAvgRoe").textContent = "0%";
         el("portAvgRs").textContent = "0";
@@ -938,7 +1078,7 @@
         totalRoe += s.roe;
         totalRs += s.rsRating;
         totalAllocPct += (s.allocPct || 20);
-        
+
         const posDollars = p.capital * ((s.allocPct || 20) / 100);
         const maxLoss = posDollars * 0.075;
         totalMaxLoss += maxLoss;
