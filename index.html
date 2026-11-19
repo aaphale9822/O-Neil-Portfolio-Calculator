@@ -3,22 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CAN SLIM Growth Dashboard — index_v5.html</title>
+  <title>CAN SLIM Concentrated Growth Dashboard — index_v6.html</title>
   <style>
     :root {
-      --bg: #0b101b;
-      --panel: #131b2e;
-      --panel-2: #19243d;
-      --border: #273657;
-      --text: #e6edf7;
-      --muted: #93a4c3;
+      --bg: #070b14;
+      --panel: #0f172a;
+      --panel-2: #162038;
+      --border: #243354;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
       --accent: #3b82f6;
-      --green: #16a34a;
-      --green-bg: rgba(22, 163, 74, 0.16);
+      --green: #22c55e;
+      --green-bg: rgba(34, 197, 94, 0.14);
       --yellow: #eab308;
-      --yellow-bg: rgba(234, 179, 8, 0.16);
+      --yellow-bg: rgba(234, 179, 8, 0.14);
       --red: #ef4444;
-      --red-bg: rgba(239, 68, 68, 0.16);
+      --red-bg: rgba(239, 68, 68, 0.14);
     }
 
     * { box-sizing: border-box; }
@@ -28,36 +28,36 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
-      line-height: 1.45;
+      font-size: 13px;
     }
 
-    header {
+    .topbar {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
-      padding: 16px 24px;
+      gap: 10px;
+      padding: 10px 18px;
       background: var(--panel);
       border-bottom: 1px solid var(--border);
     }
 
-    .brand h1 {
-      margin: 0;
-      font-size: 1.15rem;
-      letter-spacing: 0.02em;
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
-    .brand p {
-      margin: 2px 0 0;
-      color: var(--muted);
-      font-size: 0.85rem;
+    .topbar-title {
+      font-weight: 700;
+      font-size: 0.95rem;
     }
 
-    .top-controls {
+    .topbar-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
     }
 
@@ -65,20 +65,19 @@
       background: var(--panel-2);
       color: var(--text);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 10px;
-      font-size: 0.88rem;
+      border-radius: 5px;
+      padding: 6px 9px;
+      font-size: 0.82rem;
     }
 
     button {
       cursor: pointer;
       font-weight: 600;
-      transition: background 0.15s ease, border-color 0.15s ease;
     }
 
     button:hover {
       border-color: var(--accent);
-      background: #1f2d4c;
+      background: #1e2d4d;
     }
 
     button.primary {
@@ -87,245 +86,204 @@
       color: #fff;
     }
 
+    button.warn {
+      border-color: rgba(234, 179, 8, 0.45);
+      color: #fde047;
+    }
+
     button.danger {
-      background: transparent;
-      border-color: rgba(239, 68, 68, 0.5);
+      border-color: rgba(239, 68, 68, 0.45);
       color: #fca5a5;
     }
 
-    .market-bar {
+    .strip {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
-      padding: 10px 24px;
-      background: #0f1626;
+      gap: 10px;
+      padding: 7px 18px;
+      background: #0b1120;
       border-bottom: 1px solid var(--border);
-      font-size: 0.86rem;
+      font-size: 0.8rem;
     }
 
-    .bench-pills {
+    .pill-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
     }
 
-    .bench-pill {
-      padding: 4px 10px;
+    .pill {
+      padding: 2px 8px;
       border-radius: 999px;
       background: var(--panel);
       border: 1px solid var(--border);
       font-variant-numeric: tabular-nums;
     }
 
-    .diag-banner {
-      margin: 14px 24px 0;
-      padding: 10px 14px;
-      border-radius: 8px;
+    .diag {
+      margin: 10px 18px 0;
+      padding: 7px 12px;
+      border-radius: 6px;
       background: var(--panel);
       border: 1px solid var(--border);
       color: var(--muted);
-      font-size: 0.84rem;
+      font-size: 0.78rem;
     }
 
-    .container {
+    .main-grid {
       display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 18px;
-      padding: 18px 24px 36px;
+      grid-template-columns: 330px 1fr;
+      gap: 12px;
+      padding: 12px 18px 24px;
     }
 
-    @media (max-width: 960px) {
-      .container { grid-template-columns: 1fr; }
+    @media (max-width: 920px) {
+      .main-grid { grid-template-columns: 1fr; }
     }
 
-    .panel {
+    .card {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
+      border-radius: 8px;
+      padding: 12px;
     }
 
     .tabs {
       display: flex;
       gap: 6px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
-    .tab-btn {
+    .tab {
       flex: 1;
       text-align: center;
-      padding: 7px;
-      font-size: 0.84rem;
+      padding: 6px;
+      font-size: 0.8rem;
     }
 
-    .tab-btn.active {
+    .tab.active {
       background: var(--accent);
       border-color: var(--accent);
       color: #fff;
     }
 
-    .stock-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin: 12px 0;
-    }
-
-    .stock-card {
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .stock-card.active {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent);
-    }
-
-    .badge {
-      padding: 3px 8px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .badge.GREEN { background: var(--green-bg); color: #86efac; border: 1px solid rgba(22, 163, 74, 0.45); }
-    .badge.YELLOW { background: var(--yellow-bg); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.45); }
-    .badge.RED { background: var(--red-bg); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.45); }
-
-    .signal-box {
-      padding: 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      margin-bottom: 16px;
-    }
-
-    .signal-box.GREEN { background: var(--green-bg); border-color: rgba(22, 163, 74, 0.5); }
-    .signal-box.YELLOW { background: var(--yellow-bg); border-color: rgba(234, 179, 8, 0.5); }
-    .signal-box.RED { background: var(--red-bg); border-color: rgba(239, 68, 68, 0.5); }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin: 14px 0;
-    }
-
-    @media (max-width: 680px) {
-      .grid-3 { grid-template-columns: 1fr; }
-    }
-
-    .metric-box {
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 12px;
-    }
-
-    .metric-box .label {
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
-
-    .metric-box .val {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-top: 2px;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      margin-top: 12px;
-    }
-
-    @media (max-width: 680px) {
-      .form-grid { grid-template-columns: 1fr; }
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .field label {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-
-    .checklist {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 12px;
-    }
-
-    .check-row {
+    .stock-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 8px 10px;
+      margin-top: 6px;
       border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      cursor: pointer;
+    }
+
+    .stock-item.active {
+      border-color: var(--accent);
+    }
+
+    .badge {
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .badge.GREEN { background: var(--green-bg); color: #86efac; border: 1px solid rgba(34,197,94,0.4); }
+    .badge.YELLOW { background: var(--yellow-bg); color: #fde047; border: 1px solid rgba(234,179,8,0.4); }
+    .badge.RED { background: var(--red-bg); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+
+    .sig-banner {
+      padding: 10px 12px;
+      border-radius: 7px;
+      border: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+
+    .sig-banner.GREEN { background: var(--green-bg); border-color: rgba(34,197,94,0.45); }
+    .sig-banner.YELLOW { background: var(--yellow-bg); border-color: rgba(234,179,8,0.45); }
+    .sig-banner.RED { background: var(--red-bg); border-color: rgba(239,68,68,0.45); }
+
+    .kpi-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .kpi-3 { grid-template-columns: 1fr; }
+    }
+
+    .kpi {
       background: var(--panel-2);
       border: 1px solid var(--border);
-      font-size: 0.85rem;
+      border-radius: 6px;
+      padding: 8px 10px;
     }
 
-    .tag-pass { color: #86efac; font-weight: 700; }
-    .tag-warn { color: #fde047; font-weight: 700; }
-    .tag-fail { color: #fca5a5; font-weight: 700; }
+    .kpi .k-lbl { font-size: 0.72rem; color: var(--muted); }
+    .kpi .k-val { font-size: 0.96rem; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
-    .helper-row {
+    .editor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .editor-grid { grid-template-columns: 1fr; }
+    }
+
+    .fld { display: flex; flex-direction: column; gap: 3px; }
+    .fld label { font-size: 0.74rem; color: var(--muted); }
+
+    .tool-strip {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
+      align-items: center;
       margin-top: 10px;
-      padding: 10px;
-      border-radius: 8px;
-      background: #0f1626;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #0b1120;
       border: 1px dashed var(--border);
-      font-size: 0.82rem;
+      font-size: 0.76rem;
     }
 
-    .muted { color: var(--muted); font-size: 0.8rem; }
+    .muted { color: var(--muted); font-size: 0.76rem; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <h1>CAN SLIM Concentrated Growth Dashboard (`index_v5.html`)</h1>
-      <p>4–8 Leader Framework · Manual &amp; API Sync · Automated N &amp; SPY/QQQ Market Helpers</p>
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title">CAN SLIM Dashboard (index_v6.html)</span>
+      <span class="muted">4–8 Leaders · Manual + Auto N/M</span>
     </div>
-    <div class="top-controls">
-      <input id="apiKeyInput" type="password" placeholder="Finnhub API Key (optional)" style="width: 210px;" />
+    <div class="topbar-actions">
+      <input id="apiKeyInput" type="password" placeholder="Finnhub API Key" style="width: 175px;" />
       <button id="saveKeyBtn">Save Key</button>
-      <button id="syncMarketBtn" class="primary">Sync SPY/QQQ &amp; Stock</button>
+      <button id="syncBtn" class="primary">Sync SPY/QQQ &amp; Quote</button>
+      <button id="exportJsonBtn" class="warn">Export JSON</button>
+      <button id="importJsonBtn">Import JSON</button>
       <button id="resetDefaultsBtn" class="danger">Reset Defaults</button>
+      <input id="importFileInput" type="file" accept="application/json,.json" style="display:none;" />
     </div>
-  </header>
+  </div>
 
-  <div class="market-bar">
-    <div class="bench-pills">
-      <span class="bench-pill" id="spyPill">SPY: --</span>
-      <span class="bench-pill" id="qqqPill">QQQ: --</span>
-      <span class="muted" id="marketHintText">Market hint updates when syncing SPY/QQQ; manual M override stays respected.</span>
+  <div class="strip">
+    <div class="pill-row">
+      <span class="pill" id="spyPill">SPY: --</span>
+      <span class="pill" id="qqqPill">QQQ: --</span>
+      <span class="muted" id="mStatusNote">M respects manual selection unless synced without override.</span>
     </div>
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <label for="globalMarketSelect" class="muted">M — Market Trend:</label>
-      <select id="globalMarketSelect">
+    <div style="display:flex; align-items:center; gap:6px;">
+      <label for="mSelect" class="muted">M — Market Trend:</label>
+      <select id="mSelect">
         <option value="uptrend">Confirmed Uptrend (Green)</option>
         <option value="choppy">Uptrend Under Pressure / Choppy</option>
         <option value="correction">Market in Correction</option>
@@ -333,31 +291,29 @@
     </div>
   </div>
 
-  <div class="diag-banner" id="diagBanner">
-    Diagnostic: Ready. Free Finnhub keys may return HTTP 403 on /stock/candle—use the 6-month RS estimator below or enter Fidelity chart metrics directly.
+  <div class="diag" id="diagBox">
+    Diagnostic: Ready. Use Export JSON / Import JSON to back up or restore your state, or Reset Defaults anytime.
   </div>
 
-  <div class="container">
-    <aside class="panel">
+  <div class="main-grid">
+    <div class="card">
       <div class="tabs">
-        <button class="tab-btn active" data-tab="watchlist">Watchlist</button>
-        <button class="tab-btn" data-tab="portfolio">Self Portfolio</button>
+        <button class="tab active" data-tab="watchlist">Watchlist</button>
+        <button class="tab" data-tab="portfolio">Self Portfolio</button>
       </div>
-
-      <div style="display: flex; gap: 6px;">
-        <input id="newTickerInput" type="text" placeholder="Ticker (e.g., MSFT, ABBV)" style="flex: 1; text-transform: uppercase;" />
+      <div style="display:flex; gap:6px;">
+        <input id="addTickerInput" type="text" placeholder="Add symbol (e.g., ABBV)" style="flex:1; text-transform:uppercase;" />
         <button id="addTickerBtn" class="primary">Add</button>
       </div>
+      <div id="stockList"></div>
+      <div class="muted" id="healthLine" style="margin-top:10px;">Health: --</div>
+    </div>
 
-      <div class="stock-list" id="stockList"></div>
-      <div class="muted" id="healthSummary">Portfolio Health: --</div>
-    </aside>
-
-    <main class="panel" id="detailPanel"></main>
+    <div class="card" id="detailCard"></div>
   </div>
 
   <script>
-    const STORAGE_KEY = "canslim_dashboard_v5_state";
+    const STORAGE_KEY = "canslim_dashboard_v6_state";
     const KEY_STORAGE = "canslim_finnhub_key_v1";
 
     const DEFAULT_STATE = {
@@ -365,72 +321,29 @@
       marketTrend: "choppy",
       manualMarketOverride: false,
       capitalPool: 50000,
-      selectedByTab: {
-        watchlist: "ABBV",
-        portfolio: "ABBV"
-      },
+      selectedByTab: { watchlist: "ABBV", portfolio: "ABBV" },
       watchlist: [
         {
-          symbol: "ABBV",
-          price: 286.01,
-          pivot: 302.93,
-          high52: 302.93,
-          qEps: 105.0,
-          aEps: 28.0,
-          roe: 30.1,
-          rsRating: 92,
-          volSurge: -25,
-          chartSetup: "base",
-          manualChartOverride: false,
-          instSponsorship: "strong",
-          weightPct: 20
+          symbol: "ABBV", price: 286.01, pivot: 302.93, high52: 302.93,
+          qEps: 105.0, aEps: 28.0, roe: 30.1, rsRating: 92, volSurge: -25,
+          chartSetup: "base", manualChartOverride: false, instSponsorship: "strong", weightPct: 20
         },
         {
-          symbol: "CSCO",
-          price: 97.18,
-          pivot: 130.37,
-          high52: 130.37,
-          qEps: 59.75,
-          aEps: 12.0,
-          roe: 30.1,
-          rsRating: 30,
-          volSurge: 5,
-          chartSetup: "downtrend",
-          manualChartOverride: true,
-          instSponsorship: "strong",
-          weightPct: 20
+          symbol: "CSCO", price: 97.18, pivot: 130.37, high52: 130.37,
+          qEps: 59.75, aEps: 12.0, roe: 30.1, rsRating: 30, volSurge: 5,
+          chartSetup: "downtrend", manualChartOverride: true, instSponsorship: "strong", weightPct: 20
         },
         {
-          symbol: "NVDA",
-          price: 150.96,
-          pivot: 243.37,
-          high52: 243.37,
-          qEps: 107.1,
-          aEps: 45.0,
-          roe: 55.0,
-          rsRating: 15,
-          volSurge: -10,
-          chartSetup: "downtrend",
-          manualChartOverride: true,
-          instSponsorship: "strong",
-          weightPct: 20
+          symbol: "NVDA", price: 150.96, pivot: 243.37, high52: 243.37,
+          qEps: 107.1, aEps: 45.0, roe: 55.0, rsRating: 15, volSurge: -10,
+          chartSetup: "downtrend", manualChartOverride: true, instSponsorship: "strong", weightPct: 20
         }
       ],
       portfolio: [
         {
-          symbol: "ABBV",
-          price: 286.01,
-          pivot: 302.93,
-          high52: 302.93,
-          qEps: 105.0,
-          aEps: 28.0,
-          roe: 30.1,
-          rsRating: 92,
-          volSurge: -25,
-          chartSetup: "base",
-          manualChartOverride: false,
-          instSponsorship: "strong",
-          weightPct: 25
+          symbol: "ABBV", price: 286.01, pivot: 302.93, high52: 302.93,
+          qEps: 105.0, aEps: 28.0, roe: 30.1, rsRating: 92, volSurge: -25,
+          chartSetup: "base", manualChartOverride: false, instSponsorship: "strong", weightPct: 25
         }
       ]
     };
@@ -452,458 +365,396 @@
     }
 
     function setDiag(msg) {
-      document.getElementById("diagBanner").textContent = `Diagnostic: ${msg}`;
+      document.getElementById("diagBox").textContent = `Diagnostic: ${msg}`;
     }
 
-    // Automate N (Chart Base & Pivot Status) from price, pivot/52w high, and RS
     function suggestChartSetup(stock) {
       const price = Number(stock.price) || 0;
       const pivot = Number(stock.pivot) || Number(stock.high52) || price;
       const rs = Number(stock.rsRating) || 0;
       if (!price || !pivot) return stock.chartSetup || "base";
-
       const pctFromPivot = ((price - pivot) / pivot) * 100;
-      if (pctFromPivot >= -1 && pctFromPivot <= 5 && rs >= 75) {
-        return "breakout";
-      }
-      if (pctFromPivot <= -15 || rs < 50) {
-        return "downtrend";
-      }
+      if (pctFromPivot >= -1 && pctFromPivot <= 5 && rs >= 75) return "breakout";
+      if (pctFromPivot <= -15 || rs < 50) return "downtrend";
       return "base";
     }
 
-    // Estimate RS (1-99) from 6-month price change using app formula
     function estimateSixMonthRS(startPrice, endPrice) {
       const s = Number(startPrice);
       const e = Number(endPrice);
       if (!s || !e || s <= 0) return null;
-      const pctReturn = ((e - s) / s) * 100;
-      return Math.max(1, Math.min(99, Math.round(50 + pctReturn * 1.1)));
+      const pct = ((e - s) / s) * 100;
+      return Math.max(1, Math.min(99, Math.round(50 + pct * 1.1)));
     }
 
-    function computeStockSignal(stock, marketTrend) {
+    function computeSignal(stock, mTrend) {
       const price = Number(stock.price) || 0;
       const qEps = Number(stock.qEps) || 0;
-      const volSurge = Number(stock.volSurge) || 0;
+      const vol = Number(stock.volSurge) || 0;
       const rs = Number(stock.rsRating) || 0;
-      const chartSetup = stock.chartSetup || "base";
-      const sponsorship = stock.instSponsorship || "strong";
+      const setup = stock.chartSetup || "base";
+      const spons = stock.instSponsorship || "strong";
 
-      if (price < 15 || qEps < 10 || chartSetup === "downtrend" || sponsorship === "weak") {
-        return {
-          code: "RED",
-          label: "RED — AVOID / SELL & PROTECT CAPITAL",
-          desc: "Hard disqualifier triggered (price < $15, quarterly EPS < 10%, broken chart/downtrend, or weak sponsorship)."
-        };
+      if (price < 15 || qEps < 10 || setup === "downtrend" || spons === "weak") {
+        return { code: "RED", title: "RED — AVOID / SELL & PROTECT CAPITAL", detail: "Disqualifier active (price < $15, qEPS < 10%, downtrend chart, or weak sponsorship)." };
       }
-
-      const isGreen =
-        marketTrend === "uptrend" &&
-        chartSetup === "breakout" &&
-        volSurge >= 40 &&
-        rs >= 80 &&
-        qEps >= 25;
-
-      if (isGreen) {
-        return {
-          code: "GREEN",
-          label: "GREEN — BUY BREAKOUT (WITH 7.5% STOP)",
-          desc: "Confirmed uptrend, proper pivot breakout, high volume surge (>= +40%), and strong relative strength (>= 80)."
-        };
+      if (mTrend === "uptrend" && setup === "breakout" && vol >= 40 && rs >= 80 && qEps >= 25) {
+        return { code: "GREEN", title: "GREEN — BUY BREAKOUT (WITH 7.5% STOP)", detail: "Confirmed uptrend, proper pivot breakout, high volume (>= +40%), and RS >= 80." };
       }
-
-      return {
-        code: "YELLOW",
-        label: "YELLOW — WATCHLIST / HOLD & WAIT",
-        desc: "No hard red disqualifier, but breakout timing, volume surge, or general market trend (M) is not yet green."
-      };
+      return { code: "YELLOW", title: "YELLOW — WATCHLIST / HOLD & WAIT", detail: "No hard red trigger, but market trend (M), pivot timing (N), or volume surge (S) is not yet green." };
     }
 
-    function computeScore(stock, marketTrend) {
-      let score = 0;
-      if ((Number(stock.price) || 0) >= 15) score += 15;
-      if ((Number(stock.qEps) || 0) >= 25) score += 20;
-      else if ((Number(stock.qEps) || 0) >= 10) score += 10;
-
-      if ((Number(stock.aEps) || 0) >= 25 && (Number(stock.roe) || 0) >= 17) score += 15;
-      else if ((Number(stock.roe) || 0) >= 17) score += 8;
-
-      if (stock.chartSetup === "breakout") score += 15;
-      else if (stock.chartSetup === "base") score += 8;
-
-      if ((Number(stock.volSurge) || 0) >= 40) score += 15;
-      else if ((Number(stock.volSurge) || 0) >= 0) score += 6;
-
-      if ((Number(stock.rsRating) || 0) >= 80 && stock.instSponsorship === "strong") score += 15;
-      else if ((Number(stock.rsRating) || 0) >= 60) score += 7;
-
-      if (marketTrend === "uptrend") score += 5;
-      else if (marketTrend === "choppy") score += 2;
-
-      return Math.min(100, score);
+    function computeScore(stock, mTrend) {
+      let sc = 0;
+      if ((Number(stock.price) || 0) >= 15) sc += 15;
+      if ((Number(stock.qEps) || 0) >= 25) sc += 20;
+      else if ((Number(stock.qEps) || 0) >= 10) sc += 10;
+      if ((Number(stock.aEps) || 0) >= 25 && (Number(stock.roe) || 0) >= 17) sc += 15;
+      else if ((Number(stock.roe) || 0) >= 17) sc += 8;
+      if (stock.chartSetup === "breakout") sc += 15;
+      else if (stock.chartSetup === "base") sc += 8;
+      if ((Number(stock.volSurge) || 0) >= 40) sc += 15;
+      else if ((Number(stock.volSurge) || 0) >= 0) sc += 6;
+      if ((Number(stock.rsRating) || 0) >= 80 && stock.instSponsorship === "strong") sc += 15;
+      else if ((Number(stock.rsRating) || 0) >= 60) sc += 7;
+      if (mTrend === "uptrend") sc += 5;
+      else if (mTrend === "choppy") sc += 2;
+      return Math.min(100, sc);
     }
 
-    function getActiveList() {
+    function activeList() {
       return state[state.activeTab] || state.watchlist;
     }
 
-    function getSelectedStock() {
-      const list = getActiveList();
+    function selectedStock() {
+      const list = activeList();
       const sym = state.selectedByTab[state.activeTab];
       return list.find((s) => s.symbol === sym) || list[0] || null;
     }
 
     function render() {
-      document.querySelectorAll(".tab-btn").forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.tab === state.activeTab);
-      });
+      document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === state.activeTab));
+      document.getElementById("mSelect").value = state.marketTrend;
 
-      const marketSelect = document.getElementById("globalMarketSelect");
-      marketSelect.value = state.marketTrend;
-
-      const list = getActiveList();
-      const selected = getSelectedStock();
-      if (selected) {
-        state.selectedByTab[state.activeTab] = selected.symbol;
-      }
+      const list = activeList();
+      const sel = selectedStock();
+      if (sel) state.selectedByTab[state.activeTab] = sel.symbol;
 
       const listEl = document.getElementById("stockList");
       listEl.innerHTML = "";
+      let sum = 0;
 
-      let healthSum = 0;
-      list.forEach((stock) => {
-        const sig = computeStockSignal(stock, state.marketTrend);
-        const sc = computeScore(stock, state.marketTrend);
-        healthSum += sc;
-
-        const card = document.createElement("div");
-        card.className = "stock-card" + (selected && selected.symbol === stock.symbol ? " active" : "");
-        card.innerHTML = `
+      list.forEach((st) => {
+        const sig = computeSignal(st, state.marketTrend);
+        const sc = computeScore(st, state.marketTrend);
+        sum += sc;
+        const row = document.createElement("div");
+        row.className = "stock-item" + (sel && sel.symbol === st.symbol ? " active" : "");
+        row.innerHTML = `
           <div>
-            <strong>${stock.symbol}</strong> · $${Number(stock.price).toFixed(2)}<br />
-            <span class="muted">RS ${stock.rsRating} · Vol ${Number(stock.volSurge) >= 0 ? "+" : ""}${stock.volSurge}% · Score ${sc}</span>
+            <strong>${st.symbol}</strong> · $${Number(st.price).toFixed(2)}<br />
+            <span class="muted">RS ${st.rsRating} · Vol ${Number(st.volSurge) >= 0 ? "+" : ""}${st.volSurge}% · ${sc}/100</span>
           </div>
           <span class="badge ${sig.code}">${sig.code}</span>
         `;
-        card.addEventListener("click", () => {
-          state.selectedByTab[state.activeTab] = stock.symbol;
+        row.onclick = () => {
+          state.selectedByTab[state.activeTab] = st.symbol;
           saveState();
           render();
-        });
-        listEl.appendChild(card);
+        };
+        listEl.appendChild(row);
       });
 
-      const avgHealth = list.length ? Math.round(healthSum / list.length) : 0;
-      document.getElementById("healthSummary").textContent =
-        `${state.activeTab === "watchlist" ? "Watchlist" : "Portfolio"} Average Health: ${avgHealth} / 100 (${list.length} tracked)`;
+      const avg = list.length ? Math.round(sum / list.length) : 0;
+      document.getElementById("healthLine").textContent = `Average Health: ${avg} / 100 (${list.length} tickers)`;
 
-      renderDetail(selected);
+      renderDetail(sel);
       saveState();
     }
 
-    function renderDetail(stock) {
-      const panel = document.getElementById("detailPanel");
-      if (!stock) {
-        panel.innerHTML = "<p>No stocks in this list. Add a ticker on the left.</p>";
+    function renderDetail(st) {
+      const card = document.getElementById("detailCard");
+      if (!st) {
+        card.innerHTML = "<p>No stocks in list.</p>";
         return;
       }
 
-      const sig = computeStockSignal(stock, state.marketTrend);
-      const score = computeScore(stock, state.marketTrend);
-      const price = Number(stock.price) || 0;
-      const stopPrice = (price * 0.925).toFixed(2);
-      const targetLow = (price * 1.2).toFixed(2);
-      const targetHigh = (price * 1.25).toFixed(2);
-      const allocDollars = (Number(state.capitalPool) || 50000) * ((Number(stock.weightPct) || 20) / 100);
-      const shares = price > 0 ? Math.floor(allocDollars / price) : 0;
+      const sig = computeSignal(st, state.marketTrend);
+      const sc = computeScore(st, state.marketTrend);
+      const p = Number(st.price) || 0;
+      const alloc = (Number(state.capitalPool) || 50000) * ((Number(st.weightPct) || 20) / 100);
+      const sh = p > 0 ? Math.floor(alloc / p) : 0;
+      const autoN = suggestChartSetup(st);
 
-      const autoSuggestedN = suggestChartSetup(stock);
-
-      panel.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
           <div>
-            <h2 style="margin:0;">${stock.symbol} — Signal &amp; CAN SLIM Editor</h2>
-            <span class="muted">Auto-suggested N from price/pivot/RS: <strong>${autoSuggestedN}</strong> ${stock.manualChartOverride ? "(Manual Override Active)" : "(Auto-Synced)"}</span>
+            <strong>${st.symbol}</strong> · <span class="muted">Auto N: <strong>${autoN}</strong> ${st.manualChartOverride ? "(Manual)" : "(Auto)"}</span>
           </div>
-          <div>
-            <strong>CAN SLIM Score: ${score} / 100</strong>
+          <strong>Score: ${sc} / 100</strong>
+        </div>
+
+        <div class="sig-banner ${sig.code}">
+          <div style="font-weight:700;">${sig.title}</div>
+          <div class="muted" style="color:inherit; margin-top:2px;">${sig.detail}</div>
+        </div>
+
+        <div class="kpi-3">
+          <div class="kpi">
+            <div class="k-lbl">Position Size (${st.weightPct}%)</div>
+            <div class="k-val">${sh} sh ($${Math.round(alloc).toLocaleString()})</div>
+          </div>
+          <div class="kpi">
+            <div class="k-lbl">Hard Stop (-7.5%)</div>
+            <div class="k-val">$${(p * 0.925).toFixed(2)}</div>
+          </div>
+          <div class="kpi">
+            <div class="k-lbl">Target (+20% to +25%)</div>
+            <div class="k-val">$${(p * 1.2).toFixed(2)} – $${(p * 1.25).toFixed(2)}</div>
           </div>
         </div>
 
-        <div class="signal-box ${sig.code}" style="margin-top:12px;">
-          <div style="font-weight:700; font-size:1rem;">${sig.label}</div>
-          <div style="margin-top:4px; font-size:0.88rem;">${sig.desc}</div>
-        </div>
-
-        <div class="grid-3">
-          <div class="metric-box">
-            <div class="label">Suggested Shares (${stock.weightPct}% of $${Number(state.capitalPool).toLocaleString()})</div>
-            <div class="val">${shares} sh ($${Math.round(allocDollars).toLocaleString()})</div>
+        <div class="editor-grid">
+          <div class="fld">
+            <label>Price ($)</label>
+            <input id="in_price" type="number" step="0.01" value="${st.price}" />
           </div>
-          <div class="metric-box">
-            <div class="label">Hard Stop-Loss (-7.5%)</div>
-            <div class="val">$${stopPrice}</div>
+          <div class="fld">
+            <label>Pivot / 52-Wk High ($)</label>
+            <input id="in_pivot" type="number" step="0.01" value="${st.pivot}" />
           </div>
-          <div class="metric-box">
-            <div class="label">Profit Target (+20% to +25%)</div>
-            <div class="val">$${targetLow} – $${targetHigh}</div>
+          <div class="fld">
+            <label>C — Qtr EPS YoY (%)</label>
+            <input id="in_qEps" type="number" step="0.1" value="${st.qEps}" />
           </div>
-        </div>
-
-        <div class="form-grid">
-          <div class="field">
-            <label>Current Price ($)</label>
-            <input type="number" step="0.01" id="f_price" value="${stock.price}" />
-          </div>
-          <div class="field">
-            <label>Breakout Pivot / 52-Wk High ($)</label>
-            <input type="number" step="0.01" id="f_pivot" value="${stock.pivot}" />
-          </div>
-          <div class="field">
-            <label>C — Quarterly EPS Growth YoY (%)</label>
-            <input type="number" step="0.1" id="f_qEps" value="${stock.qEps}" />
-          </div>
-          <div class="field">
-            <label>A — Annual EPS Growth (%) &amp; ROE (%)</label>
+          <div class="fld">
+            <label>A — Ann EPS (%) &amp; ROE (%)</label>
             <div style="display:flex; gap:6px;">
-              <input type="number" step="0.1" id="f_aEps" value="${stock.aEps}" placeholder="Ann EPS %" style="width:50%;" />
-              <input type="number" step="0.1" id="f_roe" value="${stock.roe}" placeholder="ROE %" style="width:50%;" />
+              <input id="in_aEps" type="number" step="0.1" value="${st.aEps}" style="width:50%;" />
+              <input id="in_roe" type="number" step="0.1" value="${st.roe}" style="width:50%;" />
             </div>
           </div>
-          <div class="field">
-            <label>L — Relative Strength Rating (1–99)</label>
-            <input type="number" min="1" max="99" id="f_rs" value="${stock.rsRating}" />
+          <div class="fld">
+            <label>L — RS Rating (1–99)</label>
+            <input id="in_rs" type="number" min="1" max="99" value="${st.rsRating}" />
           </div>
-          <div class="field">
-            <label>S — Breakout Volume vs Avg (%)</label>
-            <input type="number" step="1" id="f_vol" value="${stock.volSurge}" />
+          <div class="fld">
+            <label>S — Vol Surge vs Avg (%)</label>
+            <input id="in_vol" type="number" step="1" value="${st.volSurge}" />
           </div>
-          <div class="field">
+          <div class="fld">
             <label>N — Chart Base &amp; Pivot Status</label>
-            <select id="f_chartSetup">
-              <option value="breakout" ${stock.chartSetup === "breakout" ? "selected" : ""}>Proper Breakout (0% to +5% of Pivot)</option>
-              <option value="base" ${stock.chartSetup === "base" ? "selected" : ""}>Constructive Base Building (Wait)</option>
-              <option value="downtrend" ${stock.chartSetup === "downtrend" ? "selected" : ""}>Broken / Below Key Moving Averages</option>
+            <select id="in_setup">
+              <option value="breakout" ${st.chartSetup === "breakout" ? "selected" : ""}>Proper Breakout (0% to +5% of Pivot)</option>
+              <option value="base" ${st.chartSetup === "base" ? "selected" : ""}>Constructive Base Building (Wait)</option>
+              <option value="downtrend" ${st.chartSetup === "downtrend" ? "selected" : ""}>Broken / Below Key Moving Averages</option>
             </select>
           </div>
-          <div class="field">
+          <div class="fld">
             <label>I — Institutional Sponsorship</label>
-            <select id="f_sponsorship">
-              <option value="strong" ${stock.instSponsorship === "strong" ? "selected" : ""}>Strong / Increasing</option>
-              <option value="neutral" ${stock.instSponsorship === "neutral" ? "selected" : ""}>Neutral / Mixed</option>
-              <option value="weak" ${stock.instSponsorship === "weak" ? "selected" : ""}>Weak / Distribution</option>
+            <select id="in_spons">
+              <option value="strong" ${st.instSponsorship === "strong" ? "selected" : ""}>Strong / Increasing</option>
+              <option value="neutral" ${st.instSponsorship === "neutral" ? "selected" : ""}>Neutral / Mixed</option>
+              <option value="weak" ${st.instSponsorship === "weak" ? "selected" : ""}>Weak / Distribution</option>
             </select>
           </div>
         </div>
 
-        <div class="helper-row">
-          <span class="muted" style="width:100%;"><strong>6-Month RS Helper (when /stock/candle returns 403):</strong></span>
-          <input type="number" step="0.01" id="rsStartPrice" placeholder="~6M Ago Price ($)" style="width:150px;" />
-          <input type="number" step="0.01" id="rsEndPrice" value="${stock.price}" placeholder="Current Price ($)" style="width:150px;" />
-          <button id="applyEstRsBtn">Calc &amp; Apply RS</button>
-          <button id="reAutoNBtn">Re-Run Auto N</button>
-        </div>
-
-        <div class="checklist">
-          <div class="check-row">
-            <span>Price Floor (&gt;= $15)</span>
-            <span class="${price >= 15 ? "tag-pass" : "tag-fail"}">${price >= 15 ? `PASS ($${price.toFixed(2)})` : `FAIL ($${price.toFixed(2)})`}</span>
-          </div>
-          <div class="check-row">
-            <span>C — Quarterly EPS (&gt;= 25% YoY)</span>
-            <span class="${stock.qEps >= 25 ? "tag-pass" : stock.qEps >= 10 ? "tag-warn" : "tag-fail"}">${stock.qEps >= 25 ? `PASS (${stock.qEps}%)` : stock.qEps >= 10 ? `WARN (${stock.qEps}%)` : `FAIL (${stock.qEps}%)`}</span>
-          </div>
-          <div class="check-row">
-            <span>S — Breakout Volume Surge (&gt;= +40%)</span>
-            <span class="${stock.volSurge >= 40 ? "tag-pass" : stock.volSurge >= 0 ? "tag-warn" : "tag-fail"}">${stock.volSurge >= 40 ? `PASS (+${stock.volSurge}%)` : `WARN (${stock.volSurge}%)`}</span>
-          </div>
-          <div class="check-row">
-            <span>L — Leader RS (&gt;= 80)</span>
-            <span class="${stock.rsRating >= 80 ? "tag-pass" : stock.rsRating >= 60 ? "tag-warn" : "tag-fail"}">${stock.rsRating >= 80 ? `PASS (RS ${stock.rsRating})` : `LOW (RS ${stock.rsRating})`}</span>
-          </div>
+        <div class="tool-strip">
+          <span class="muted">6M RS Estimator:</span>
+          <input id="rs_start" type="number" step="0.01" placeholder="~6M Ago $" style="width:110px;" />
+          <input id="rs_end" type="number" step="0.01" value="${st.price}" style="width:110px;" />
+          <button id="calcRsBtn">Apply RS</button>
+          <button id="reAutoNBtn">Auto N</button>
         </div>
       `;
 
-      const bindNum = (id, key, round = false) => {
+      const bind = (id, key, isInt = false) => {
         const el = document.getElementById(id);
-        el.addEventListener("input", () => {
-          const val = Number(el.value);
-          stock[key] = round ? Math.round(val) : val;
-          if (!stock.manualChartOverride && (key === "price" || key === "pivot" || key === "rsRating")) {
-            stock.chartSetup = suggestChartSetup(stock);
+        el.oninput = () => {
+          const n = Number(el.value);
+          st[key] = isInt ? Math.round(n) : n;
+          if (!st.manualChartOverride && (key === "price" || key === "pivot" || key === "rsRating")) {
+            st.chartSetup = suggestChartSetup(st);
           }
           render();
-        });
+        };
       };
 
-      bindNum("f_price", "price");
-      bindNum("f_pivot", "pivot");
-      bindNum("f_qEps", "qEps");
-      bindNum("f_aEps", "aEps");
-      bindNum("f_roe", "roe");
-      bindNum("f_rs", "rsRating", true);
-      bindNum("f_vol", "volSurge");
+      bind("in_price", "price");
+      bind("in_pivot", "pivot");
+      bind("in_qEps", "qEps");
+      bind("in_aEps", "aEps");
+      bind("in_roe", "roe");
+      bind("in_rs", "rsRating", true);
+      bind("in_vol", "volSurge");
 
-      document.getElementById("f_chartSetup").addEventListener("change", (e) => {
-        stock.chartSetup = e.target.value;
-        stock.manualChartOverride = true;
+      document.getElementById("in_setup").onchange = (e) => {
+        st.chartSetup = e.target.value;
+        st.manualChartOverride = true;
         render();
-      });
+      };
 
-      document.getElementById("f_sponsorship").addEventListener("change", (e) => {
-        stock.instSponsorship = e.target.value;
+      document.getElementById("in_spons").onchange = (e) => {
+        st.instSponsorship = e.target.value;
         render();
-      });
+      };
 
-      document.getElementById("applyEstRsBtn").addEventListener("click", () => {
-        const startP = Number(document.getElementById("rsStartPrice").value);
-        const endP = Number(document.getElementById("rsEndPrice").value);
-        const est = estimateSixMonthRS(startP, endP);
+      document.getElementById("calcRsBtn").onclick = () => {
+        const s = Number(document.getElementById("rs_start").value);
+        const e = Number(document.getElementById("rs_end").value);
+        const est = estimateSixMonthRS(s, e);
         if (est !== null) {
-          stock.rsRating = est;
-          if (!stock.manualChartOverride) {
-            stock.chartSetup = suggestChartSetup(stock);
-          }
-          setDiag(`Estimated RS ${est} from 6-month move ($${startP} -> $${endP}) for ${stock.symbol}.`);
+          st.rsRating = est;
+          if (!st.manualChartOverride) st.chartSetup = suggestChartSetup(st);
+          setDiag(`Set ${st.symbol} RS to ${est} from 6M move ($${s} -> $${e}).`);
           render();
-        } else {
-          setDiag("Enter a valid ~6-month starting price to estimate RS.");
         }
-      });
+      };
 
-      document.getElementById("reAutoNBtn").addEventListener("click", () => {
-        stock.manualChartOverride = false;
-        stock.chartSetup = suggestChartSetup(stock);
-        setDiag(`Re-ran automatic N suggestion for ${stock.symbol}: ${stock.chartSetup}.`);
+      document.getElementById("reAutoNBtn").onclick = () => {
+        st.manualChartOverride = false;
+        st.chartSetup = suggestChartSetup(st);
+        setDiag(`Re-ran Auto N for ${st.symbol}: ${st.chartSetup}.`);
         render();
-      });
+      };
     }
 
-    async function syncMarketAndSelected() {
-      const apiKey = document.getElementById("apiKeyInput").value.trim() || localStorage.getItem(KEY_STORAGE) || "";
-      if (!apiKey) {
-        setDiag("No Finnhub API key saved. Manual overrides, 6-month RS helper, and N automation remain active.");
-        return;
-      }
-      localStorage.setItem(KEY_STORAGE, apiKey);
-
-      try {
-        const [spyRes, qqqRes] = await Promise.all([
-          fetch(`https://finnhub.io/api/v1/quote?symbol=SPY&token=${encodeURIComponent(apiKey)}`),
-          fetch(`https://finnhub.io/api/v1/quote?symbol=QQQ&token=${encodeURIComponent(apiKey)}`)
-        ]);
-
-        let avgDp = null;
-        if (spyRes.ok) {
-          const spy = await spyRes.json();
-          if (typeof spy.c === "number" && spy.c > 0) {
-            document.getElementById("spyPill").textContent = `SPY: $${spy.c.toFixed(2)} (${spy.dp >= 0 ? "+" : ""}${Number(spy.dp).toFixed(2)}%)`;
-            avgDp = Number(spy.dp) || 0;
-          }
-        }
-        if (qqqRes.ok) {
-          const qqq = await qqqRes.json();
-          if (typeof qqq.c === "number" && qqq.c > 0) {
-            document.getElementById("qqqPill").textContent = `QQQ: $${qqq.c.toFixed(2)} (${qqq.dp >= 0 ? "+" : ""}${Number(qqq.dp).toFixed(2)}%)`;
-            avgDp = avgDp !== null ? (avgDp + (Number(qqq.dp) || 0)) / 2 : (Number(qqq.dp) || 0);
-          }
-        }
-
-        if (avgDp !== null && !state.manualMarketOverride) {
-          if (avgDp <= -1.5) state.marketTrend = "correction";
-          else if (avgDp >= 0.75) state.marketTrend = "uptrend";
-          else state.marketTrend = "choppy";
-          document.getElementById("marketHintText").textContent =
-            `Auto-updated M to "${state.marketTrend}" from SPY/QQQ avg move (${avgDp >= 0 ? "+" : ""}${avgDp.toFixed(2)}%).`;
-        }
-
-        const stock = getSelectedStock();
-        if (stock) {
-          const qRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(stock.symbol)}&token=${encodeURIComponent(apiKey)}`);
-          if (qRes.ok) {
-            const q = await qRes.json();
-            if (typeof q.c === "number" && q.c > 0) {
-              stock.price = Number(q.c.toFixed(2));
-              if (!stock.manualChartOverride) {
-                stock.chartSetup = suggestChartSetup(stock);
-              }
-            }
-          }
-        }
-
-        setDiag("Synced /quote for SPY, QQQ, and selected ticker. (/stock/candle is skipped to avoid free-tier HTTP 403.)");
+    document.querySelectorAll(".tab").forEach((t) => {
+      t.onclick = () => {
+        state.activeTab = t.dataset.tab;
         render();
-      } catch (err) {
-        setDiag(`Sync error: ${err.message}`);
-      }
-    }
-
-    document.querySelectorAll(".tab-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        state.activeTab = btn.dataset.tab;
-        render();
-      });
+      };
     });
 
-    document.getElementById("globalMarketSelect").addEventListener("change", (e) => {
+    document.getElementById("mSelect").onchange = (e) => {
       state.marketTrend = e.target.value;
       state.manualMarketOverride = true;
-      document.getElementById("marketHintText").textContent = "Manual M override active.";
+      document.getElementById("mStatusNote").textContent = "Manual M override active.";
       render();
-    });
+    };
 
-    document.getElementById("addTickerBtn").addEventListener("click", () => {
-      const input = document.getElementById("newTickerInput");
-      const sym = input.value.trim().toUpperCase();
+    document.getElementById("addTickerBtn").onclick = () => {
+      const inp = document.getElementById("addTickerInput");
+      const sym = inp.value.trim().toUpperCase();
       if (!sym) return;
-      const list = getActiveList();
-      if (!list.some((s) => s.symbol === sym)) {
+      const list = activeList();
+      if (!list.some((x) => x.symbol === sym)) {
         const item = {
-          symbol: sym,
-          price: 100,
-          pivot: 105,
-          high52: 105,
-          qEps: 25,
-          aEps: 25,
-          roe: 20,
-          rsRating: 80,
-          volSurge: 0,
-          chartSetup: "base",
-          manualChartOverride: false,
-          instSponsorship: "strong",
-          weightPct: 20
+          symbol: sym, price: 100, pivot: 105, high52: 105,
+          qEps: 25, aEps: 25, roe: 20, rsRating: 80, volSurge: 0,
+          chartSetup: "base", manualChartOverride: false, instSponsorship: "strong", weightPct: 20
         };
         item.chartSetup = suggestChartSetup(item);
         list.push(item);
         state.selectedByTab[state.activeTab] = sym;
       }
-      input.value = "";
+      inp.value = "";
       render();
-    });
+    };
 
-    document.getElementById("saveKeyBtn").addEventListener("click", () => {
-      const val = document.getElementById("apiKeyInput").value.trim();
-      localStorage.setItem(KEY_STORAGE, val);
-      setDiag(val ? "Finnhub API key saved in browser storage." : "Finnhub API key cleared.");
-    });
+    document.getElementById("saveKeyBtn").onclick = () => {
+      const k = document.getElementById("apiKeyInput").value.trim();
+      localStorage.setItem(KEY_STORAGE, k);
+      setDiag(k ? "Saved Finnhub API key." : "Cleared Finnhub API key.");
+    };
 
-    document.getElementById("syncMarketBtn").addEventListener("click", syncMarketAndSelected);
+    document.getElementById("syncBtn").onclick = async () => {
+      const apiKey = document.getElementById("apiKeyInput").value.trim() || localStorage.getItem(KEY_STORAGE) || "";
+      if (!apiKey) {
+        setDiag("Enter a Finnhub API key to fetch SPY, QQQ, and selected stock quotes.");
+        return;
+      }
+      localStorage.setItem(KEY_STORAGE, apiKey);
+      try {
+        const [spyR, qqqR] = await Promise.all([
+          fetch(`https://finnhub.io/api/v1/quote?symbol=SPY&token=${encodeURIComponent(apiKey)}`),
+          fetch(`https://finnhub.io/api/v1/quote?symbol=QQQ&token=${encodeURIComponent(apiKey)}`)
+        ]);
+        let avgDp = null;
+        if (spyR.ok) {
+          const spy = await spyR.json();
+          if (typeof spy.c === "number" && spy.c > 0) {
+            document.getElementById("spyPill").textContent = `SPY: $${spy.c.toFixed(2)} (${spy.dp >= 0 ? "+" : ""}${Number(spy.dp).toFixed(2)}%)`;
+            avgDp = Number(spy.dp) || 0;
+          }
+        }
+        if (qqqR.ok) {
+          const qqq = await qqqR.json();
+          if (typeof qqq.c === "number" && qqq.c > 0) {
+            document.getElementById("qqqPill").textContent = `QQQ: $${qqq.c.toFixed(2)} (${qqq.dp >= 0 ? "+" : ""}${Number(qqq.dp).toFixed(2)}%)`;
+            avgDp = avgDp !== null ? (avgDp + (Number(qqq.dp) || 0)) / 2 : (Number(qqq.dp) || 0);
+          }
+        }
+        if (avgDp !== null && !state.manualMarketOverride) {
+          if (avgDp <= -1.5) state.marketTrend = "correction";
+          else if (avgDp >= 0.75) state.marketTrend = "uptrend";
+          else state.marketTrend = "choppy";
+        }
+        const st = selectedStock();
+        if (st) {
+          const qR = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(st.symbol)}&token=${encodeURIComponent(apiKey)}`);
+          if (qR.ok) {
+            const q = await qR.json();
+            if (typeof q.c === "number" && q.c > 0) {
+              st.price = Number(q.c.toFixed(2));
+              if (!st.manualChartOverride) st.chartSetup = suggestChartSetup(st);
+            }
+          }
+        }
+        setDiag("Synced /quote for SPY, QQQ, and selected ticker.");
+        render();
+      } catch (err) {
+        setDiag(`Sync error: ${err.message}`);
+      }
+    };
 
-    document.getElementById("resetDefaultsBtn").addEventListener("click", () => {
+    document.getElementById("exportJsonBtn").onclick = () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "canslim-dashboard-state.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      setDiag("Exported canslim-dashboard-state.json.");
+    };
+
+    document.getElementById("importJsonBtn").onclick = () => {
+      document.getElementById("importFileInput").click();
+    };
+
+    document.getElementById("importFileInput").onchange = (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || "{}"));
+          state = { ...structuredClone(DEFAULT_STATE), ...parsed };
+          saveState();
+          render();
+          setDiag(`Imported state from ${file.name}.`);
+        } catch (err) {
+          setDiag(`Import failed: ${err.message}`);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = "";
+    };
+
+    document.getElementById("resetDefaultsBtn").onclick = () => {
       localStorage.removeItem(STORAGE_KEY);
       state = structuredClone(DEFAULT_STATE);
       document.getElementById("spyPill").textContent = "SPY: --";
       document.getElementById("qqqPill").textContent = "QQQ: --";
-      document.getElementById("marketHintText").textContent =
-        "Market hint updates when syncing SPY/QQQ; manual M override stays respected.";
-      setDiag("Reset state to clean v5 defaults.");
+      document.getElementById("mStatusNote").textContent = "M respects manual selection unless synced without override.";
+      setDiag("Reset to default state.");
       render();
-    });
+    };
 
-    const savedKey = localStorage.getItem(KEY_STORAGE);
-    if (savedKey) {
-      document.getElementById("apiKeyInput").value = savedKey;
-    }
+    const existingKey = localStorage.getItem(KEY_STORAGE);
+    if (existingKey) document.getElementById("apiKeyInput").value = existingKey;
 
     render();
   </script>
