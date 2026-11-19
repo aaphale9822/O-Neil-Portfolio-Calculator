@@ -202,7 +202,7 @@
         <h1>CAN SLIM Multi-Portfolio Analyzer &amp; Signal Calculator</h1>
         <p>Automated quote, fundamental, volume &amp; RS estimation via Finnhub with transparent sync diagnostics</p>
       </div>
-      <div class="badge-book">Auto-Sync Finnhub Engine &bull; Diagnostic Status</div>
+      <div class="badge-book">Auto-Sync Finnhub Engine v4 &bull; Clean Default State</div>
     </header>
 
     <!-- Global API & Controls Bar -->
@@ -224,13 +224,14 @@
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-secondary" id="refreshAllBtn" type="button" title="Refresh all stocks in active portfolio from Finnhub">Refresh Portfolio</button>
+        <button class="btn btn-secondary" id="resetDefaultsBtn" type="button" title="Reset saved portfolios to fresh defaults">Reset Defaults</button>
         <button class="btn btn-danger" id="deletePortfolioBtn" type="button" title="Delete current portfolio">Delete Portfolio</button>
         <button class="btn btn-secondary" id="exportBtn" type="button" title="Export portfolios to JSON file">Export Data</button>
         <label class="btn btn-secondary" style="cursor:pointer; margin-bottom:0; display:inline-flex; align-items:center;">
           Import Data <input type="file" id="importFile" accept=".json" style="display:none;" />
         </label>
       </div>
-      <div class="status-msg" id="statusMsg">Ready. Paste your Finnhub API key above and click "Fetch &amp; Add" or "Sync Selected Ticker" to see exact endpoint responses.</div>
+      <div class="status-msg" id="statusMsg">Ready. Uses fresh v4 storage so older cached 15% entries won't linger. Paste your Finnhub key and click "Fetch &amp; Add" or "Refresh Portfolio".</div>
     </div>
 
     <!-- Portfolio Tabs Bar -->
@@ -435,14 +436,16 @@
   </div>
 
   <script>
+    const STORAGE_KEY = "canslim_portfolios_v4";
+
     const DEFAULT_PORTFOLIOS = [
       {
         id: "tech-growth",
         name: "Tech Growth Portfolio",
         capital: 50000,
         stocks: [
-          { ticker: "MSFT", marketTrend: "choppy", chartSetup: "building", price: 508.29, pivotPrice: 559.15, qEps: 32.37, aEps: 22.83, roe: 33.21, volSurge: 15, rsRating: 80, instSponsorship: "strong", allocPct: 20 },
-          { ticker: "TSM", marketTrend: "choppy", chartSetup: "building", price: 362.62, pivotPrice: 487.47, qEps: 35.0, aEps: 26.0, roe: 28.0, volSurge: 12, rsRating: 84, instSponsorship: "strong", allocPct: 20 }
+          { ticker: "MSFT", marketTrend: "choppy", chartSetup: "building", price: 508.29, pivotPrice: 559.15, qEps: 32.37, aEps: 22.83, roe: 33.21, volSurge: 22.5, rsRating: 80, instSponsorship: "strong", allocPct: 20 },
+          { ticker: "TSM", marketTrend: "choppy", chartSetup: "building", price: 362.62, pivotPrice: 487.47, qEps: 35.0, aEps: 26.0, roe: 28.0, volSurge: 48.0, rsRating: 84, instSponsorship: "strong", allocPct: 20 }
         ]
       },
       {
@@ -450,12 +453,16 @@
         name: "Core Watchlist",
         capital: 30000,
         stocks: [
-          { ticker: "J", marketTrend: "choppy", chartSetup: "building", price: 158.23, pivotPrice: 162.00, qEps: -22.95, aEps: 14.0, roe: 18.5, volSurge: 5, rsRating: 75, instSponsorship: "strong", allocPct: 20 }
+          { ticker: "J", marketTrend: "choppy", chartSetup: "building", price: 158.23, pivotPrice: 162.00, qEps: -22.95, aEps: 14.0, roe: 18.5, volSurge: -8.0, rsRating: 75, instSponsorship: "strong", allocPct: 20 }
         ]
       }
     ];
 
-    let portfolios = JSON.parse(localStorage.getItem("canslim_portfolios_v2") || JSON.stringify(DEFAULT_PORTFOLIOS));
+    function cloneDefaults() {
+      return JSON.parse(JSON.stringify(DEFAULT_PORTFOLIOS));
+    }
+
+    let portfolios = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || cloneDefaults();
     let activePortfolioId = portfolios[0] ? portfolios[0].id : "tech-growth";
     let activeTicker = portfolios[0] && portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
 
@@ -470,8 +477,17 @@
     });
 
     function saveState() {
-      localStorage.setItem("canslim_portfolios_v2", JSON.stringify(portfolios));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolios));
     }
+
+    el("resetDefaultsBtn").addEventListener("click", () => {
+      portfolios = cloneDefaults();
+      activePortfolioId = portfolios[0].id;
+      activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
+      saveState();
+      renderAll();
+      el("statusMsg").textContent = "Reset portfolios to fresh v4 defaults.";
+    });
 
     el("exportBtn").addEventListener("click", () => {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(portfolios, null, 2));
@@ -703,7 +719,6 @@
       return { ok: res.ok, status: res.status, data: payload };
     }
 
-    // Fetch live quote, fundamentals, candle volume surge, and ~6-month RS estimate with clear diagnostics
     async function fetchStockDataFromFinnhub(ticker, apiKey, existingStock = null) {
       const base = existingStock ? { ...existingStock, ticker } : {
         ticker,
@@ -714,7 +729,7 @@
         qEps: 25.0,
         aEps: 20.0,
         roe: 18.0,
-        volSurge: 15,
+        volSurge: 0,
         rsRating: 80,
         instSponsorship: "strong",
         allocPct: 20
@@ -790,7 +805,7 @@
           }
         }
       } else {
-        diagnostics.push(`Candle HTTP ${candleRes.status} (manual Vol/RS kept)`);
+        diagnostics.push(`Candle HTTP ${candleRes.status} (enter Vol Surge manually)`);
       }
 
       base.chartSetup = suggestChartSetup(base.price, base.pivotPrice);
@@ -825,7 +840,7 @@
         qEps: 25.0,
         aEps: 20.0,
         roe: 18.0,
-        volSurge: 15,
+        volSurge: 0,
         rsRating: 80,
         instSponsorship: "strong",
         allocPct: 20
