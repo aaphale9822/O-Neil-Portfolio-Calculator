@@ -146,7 +146,7 @@
     }
     .helper-bar {
       background: #0f172a; border: 1px dashed var(--border); border-radius: 8px;
-      padding: 10px 12px; margin-bottom: 12px; display: flex; flex-wrap: wrap;
+      padding: 10px 12px; margin-bottom: 10px; display: flex; flex-wrap: wrap;
       gap: 8px; align-items: center; font-size: 0.78rem;
     }
 
@@ -217,9 +217,9 @@
     <header>
       <div>
         <h1>CAN SLIM Multi-Portfolio Analyzer &amp; Signal Calculator</h1>
-        <p>Automated quote, fundamental, volume &amp; RS estimation via Finnhub with SPY/QQQ M &amp; automated N helpers</p>
+        <p>Automated quote &amp; fundamental sync via Finnhub with fast RS (L) &amp; Volume Surge (S) calculators</p>
       </div>
-      <div class="badge-book">Auto-Sync Finnhub Engine v5 &bull; Override-Safe N &amp; M</div>
+      <div class="badge-book">Auto-Sync Finnhub Engine v6 &bull; Quick RS &amp; S Calculators</div>
     </header>
 
     <!-- Broad Market Benchmark Strip (SPY / QQQ) -->
@@ -260,7 +260,7 @@
           Import Data <input type="file" id="importFile" accept=".json" style="display:none;" />
         </label>
       </div>
-      <div class="status-msg" id="statusMsg">Ready. Uses v5 storage with override-safe N (price/pivot/RS) and SPY/QQQ M assistance.</div>
+      <div class="status-msg" id="statusMsg">Ready. Uses v6 storage with fast RS (L) and Volume Surge (S) calculators plus override-safe N &amp; M.</div>
     </div>
 
     <!-- Portfolio Tabs Bar -->
@@ -281,11 +281,11 @@
             <input type="text" id="quickTicker" placeholder="e.g. MSFT, TSM, J, NVDA, ABBV" style="text-transform:uppercase;" />
             <button class="btn" id="addStockBtn" type="button">Fetch &amp; Add</button>
           </div>
-          <div class="helper-note">Calls Finnhub <code>/quote</code> and <code>/stock/metric</code> (skips <code>/stock/candle</code> when blocked by free-tier HTTP 403). Volume Surge and RS stay editable manually.</div>
+          <div class="helper-note">Calls Finnhub <code>/quote</code> and <code>/stock/metric</code> (skips <code>/stock/candle</code> free-tier HTTP 403). Fill in your <strong>RS (L)</strong> and <strong>Volume Surge (S)</strong> using the quick helpers below or direct inputs.</div>
         </div>
 
         <div class="stock-list-header">
-          <span style="font-size:0.82rem; color:var(--muted); font-weight:600;">Click a stock to inspect or manually override values:</span>
+          <span style="font-size:0.82rem; color:var(--muted); font-weight:600;">Click a stock to inspect or update RS &amp; Volume Surge:</span>
           <button class="btn btn-secondary" id="refreshSelectedBtn" type="button" style="padding:5px 10px; font-size:0.76rem;">Sync Selected Ticker</button>
         </div>
 
@@ -304,11 +304,20 @@
             </div>
           </div>
 
+          <!-- Quick RS (L) Calculator -->
           <div class="helper-bar">
-            <span style="color:var(--muted); font-weight:600;">6M RS Helper:</span>
-            <input type="number" id="rsStartInput" step="0.01" placeholder="~6M Ago Price ($)" style="width:130px; padding:6px 8px; font-size:0.8rem;" />
-            <input type="number" id="rsEndInput" step="0.01" placeholder="Current Price ($)" style="width:130px; padding:6px 8px; font-size:0.8rem;" />
-            <button class="btn btn-secondary" id="applyEstRsBtn" type="button" style="padding:6px 10px; font-size:0.78rem;">Apply 6M RS</button>
+            <span style="color:var(--accent); font-weight:700;">L &mdash; 6M RS Calculator:</span>
+            <input type="number" id="rsStartInput" step="0.01" placeholder="~6M Ago Price ($)" style="width:125px; padding:6px 8px; font-size:0.8rem;" />
+            <input type="number" id="rsEndInput" step="0.01" placeholder="Current Price ($)" style="width:125px; padding:6px 8px; font-size:0.8rem;" />
+            <button class="btn btn-secondary" id="applyEstRsBtn" type="button" style="padding:6px 10px; font-size:0.78rem;">Set RS</button>
+          </div>
+
+          <!-- Quick Volume Surge (S) Calculator -->
+          <div class="helper-bar">
+            <span style="color:var(--green); font-weight:700;">S &mdash; Vol Surge Calculator:</span>
+            <input type="number" id="volCurrentInput" step="1" placeholder="Session / Recent Vol" style="width:125px; padding:6px 8px; font-size:0.8rem;" />
+            <input type="number" id="volAvgInput" step="1" placeholder="Avg Daily Vol" style="width:125px; padding:6px 8px; font-size:0.8rem;" />
+            <button class="btn btn-secondary" id="applyVolSurgeBtn" type="button" style="padding:6px 10px; font-size:0.78rem;">Set S %</button>
           </div>
 
           <div class="form-grid">
@@ -361,13 +370,13 @@
             <div class="field-group">
               <label for="volSurge">S &mdash; Breakout Volume vs Avg (%)</label>
               <input type="number" id="volSurge" step="0.1" value="0" />
-              <div class="helper-note">Enter Fidelity volume surge % directly when daily candles are unavailable.</div>
+              <div class="helper-note">Direct % difference vs. average volume (e.g., <code>45</code> = +45% above average).</div>
             </div>
 
             <div class="field-group">
               <label for="rsRating">L &mdash; Relative Strength Rating (1&ndash;99)</label>
               <input type="number" id="rsRating" min="1" max="99" value="50" />
-              <div class="helper-note">Use the 6M RS helper above or enter your RS rating (1&ndash;99).</div>
+              <div class="helper-note">Direct 1&ndash;99 RS score or calculated from the 6M RS helper above.</div>
             </div>
 
             <div class="field-group">
@@ -478,7 +487,8 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "canslim_portfolios_v5";
+    const STORAGE_KEY = "canslim_portfolios_v6";
+    const LEGACY_KEYS = ["canslim_portfolios_v5", "canslim_portfolios_v4"];
 
     const DEFAULT_PORTFOLIOS = [
       {
@@ -506,7 +516,27 @@
       return JSON.parse(JSON.stringify(DEFAULT_PORTFOLIOS));
     }
 
-    let portfolios = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || cloneDefaults();
+    function loadInitialPortfolios() {
+      const current = localStorage.getItem(STORAGE_KEY);
+      if (current) {
+        try {
+          const parsed = JSON.parse(current);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {}
+      }
+      for (const k of LEGACY_KEYS) {
+        const legacy = localStorage.getItem(k);
+        if (legacy) {
+          try {
+            const parsedLegacy = JSON.parse(legacy);
+            if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) return parsedLegacy;
+          } catch {}
+        }
+      }
+      return cloneDefaults();
+    }
+
+    let portfolios = loadInitialPortfolios();
     let activePortfolioId = portfolios[0] ? portfolios[0].id : "tech-growth";
     let activeTicker = portfolios[0] && portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
 
@@ -544,13 +574,20 @@
       return Math.max(1, Math.min(99, Math.round(50 + pct * 1.1)));
     }
 
+    function computeVolumeSurgePct(currentVol, avgVol) {
+      const cur = Number(currentVol);
+      const avg = Number(avgVol);
+      if (!Number.isFinite(cur) || !Number.isFinite(avg) || avg <= 0) return null;
+      return Number((((cur - avg) / avg) * 100).toFixed(1));
+    }
+
     el("resetDefaultsBtn").addEventListener("click", () => {
       portfolios = cloneDefaults();
       activePortfolioId = portfolios[0].id;
       activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
       saveState();
       renderAll();
-      el("statusMsg").textContent = "Reset portfolios to fresh v5 defaults.";
+      el("statusMsg").textContent = "Reset portfolios to fresh v6 defaults.";
     });
 
     el("exportBtn").addEventListener("click", () => {
@@ -682,7 +719,7 @@
             <strong style="font-size:1rem; display:flex; align-items:center; gap:6px;">
               <span class="dot ${color}"></span>${s.ticker}
             </strong>
-            <span style="font-size:0.75rem; color:var(--muted);">Pivot: $${s.pivotPrice.toFixed(2)} | Vol: ${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%</span>
+            <span style="font-size:0.75rem; color:var(--muted);">Pivot: $${s.pivotPrice.toFixed(2)} | S: ${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%</span>
           </div>
           <div>
             <span style="font-size:0.72rem; color:var(--muted);">Price</span>
@@ -814,7 +851,26 @@
       renderStockCards();
       evaluateStock();
       updatePortfolioAnalysis();
-      el("statusMsg").textContent = `Applied 6-month RS estimate (${est}) for ${s.ticker} from $${startP} to $${endP}.`;
+      el("statusMsg").textContent = `Set RS = ${est} for ${s.ticker} from 6M move ($${startP} -> $${endP}).`;
+    });
+
+    el("applyVolSurgeBtn").addEventListener("click", () => {
+      const s = getActiveStock();
+      if (!s) return;
+      const curVol = parseFloat(el("volCurrentInput").value);
+      const avgVol = parseFloat(el("volAvgInput").value);
+      const surge = computeVolumeSurgePct(curVol, avgVol);
+      if (surge === null) {
+        el("statusMsg").textContent = "Enter both session/recent volume and average daily volume (> 0) to calculate S %.";
+        return;
+      }
+      s.volSurge = surge;
+      el("volSurge").value = surge;
+      saveState();
+      renderStockCards();
+      evaluateStock();
+      updatePortfolioAnalysis();
+      el("statusMsg").textContent = `Set Volume Surge (S) = ${surge >= 0 ? "+" : ""}${surge}% for ${s.ticker}.`;
     });
 
     el("removeStockBtn").addEventListener("click", () => {
