@@ -3,380 +3,537 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CAN SLIM Concentrated Growth Dashboard — index_v6.html</title>
+  <title>CAN SLIM Multi-Stock Portfolio Analyzer & Signal Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg: #070b14;
-      --panel: #0f172a;
-      --panel-2: #162038;
-      --border: #243354;
-      --text: #e2e8f0;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-hover: #263449;
+      --border: #334155;
+      --text: #f8fafc;
       --muted: #94a3b8;
-      --accent: #3b82f6;
-      --green: #22c55e;
-      --green-bg: rgba(34, 197, 94, 0.14);
-      --yellow: #eab308;
-      --yellow-bg: rgba(234, 179, 8, 0.14);
+      --accent: #38bdf8;
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.14);
+      --yellow: #f59e0b;
+      --yellow-bg: rgba(245, 158, 11, 0.14);
       --red: #ef4444;
       --red-bg: rgba(239, 68, 68, 0.14);
     }
-
-    * { box-sizing: border-box; }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       background: var(--bg);
       color: var(--text);
-      font-size: 13px;
+      line-height: 1.5;
+      padding: 20px;
+    }
+    .container { max-width: 1360px; margin: 0 auto; }
+    header {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      gap: 16px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.02em; }
+    header p { color: var(--muted); font-size: 0.9rem; }
+    .badge-book {
+      background: rgba(56, 189, 248, 0.12); color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3); padding: 6px 12px;
+      border-radius: 999px; font-size: 0.8rem; font-weight: 600;
     }
 
-    .topbar {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 18px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
+    /* Market Benchmark Strip */
+    .market-strip {
+      background: #131d33; border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 16px; margin-bottom: 14px; display: flex; flex-wrap: wrap;
+      justify-content: space-between; align-items: center; gap: 12px; font-size: 0.84rem;
+    }
+    .bench-group { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .bench-chip {
+      background: #0f172a; border: 1px solid var(--border); border-radius: 999px;
+      padding: 4px 11px; font-variant-numeric: tabular-nums; font-weight: 600;
     }
 
-    .topbar-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
+    /* Global API & Portfolio Settings Bar */
+    .top-control-bar {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 16px; margin-bottom: 16px; display: grid;
+      grid-template-columns: 1.4fr 1fr 1.2fr auto; gap: 12px; align-items: end;
+    }
+    @media (max-width: 960px) { .top-control-bar { grid-template-columns: 1fr; } }
+    .field-group label {
+      display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; font-weight: 600;
+    }
+    input, select {
+      width: 100%; background: #0f172a; border: 1px solid var(--border); color: var(--text);
+      padding: 9px 12px; border-radius: 8px; font-size: 0.92rem; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    .btn {
+      background: var(--accent); color: #0f172a; border: none; padding: 10px 15px;
+      border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.88rem;
+      transition: opacity 0.15s; white-space: nowrap;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary { background: #334155; color: var(--text); border: 1px solid #475569; }
+    .btn-danger { background: rgba(239, 68, 68, 0.2); color: var(--red); border: 1px solid var(--red); }
+    .status-msg {
+      grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); min-height: 20px;
+      background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
     }
 
-    .topbar-title {
-      font-weight: 700;
-      font-size: 0.95rem;
+    /* Tabs Bar for Portfolios */
+    .portfolio-tabs {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 20px;
+      border-bottom: 1px solid var(--border); padding-bottom: 12px;
+    }
+    .tab-btn {
+      background: var(--card); border: 1px solid var(--border); color: var(--muted);
+      padding: 8px 16px; border-radius: 999px; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .tab-btn.active {
+      background: rgba(56, 189, 248, 0.15); border-color: var(--accent); color: var(--accent);
+    }
+    .tab-badge {
+      background: #0f172a; padding: 2px 7px; border-radius: 999px; font-size: 0.72rem; color: var(--text);
     }
 
-    .topbar-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
+    /* Main Grid */
+    .grid {
+      display: grid; grid-template-columns: 1fr 1.1fr; gap: 20px;
     }
-
-    input, select, button {
-      background: var(--panel-2);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 6px 9px;
-      font-size: 0.82rem;
-    }
-
-    button {
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    button:hover {
-      border-color: var(--accent);
-      background: #1e2d4d;
-    }
-
-    button.primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-
-    button.warn {
-      border-color: rgba(234, 179, 8, 0.45);
-      color: #fde047;
-    }
-
-    button.danger {
-      border-color: rgba(239, 68, 68, 0.45);
-      color: #fca5a5;
-    }
-
-    .strip {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      padding: 7px 18px;
-      background: #0b1120;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.8rem;
-    }
-
-    .pill-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .pill {
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .diag {
-      margin: 10px 18px 0;
-      padding: 7px 12px;
-      border-radius: 6px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 0.78rem;
-    }
-
-    .main-grid {
-      display: grid;
-      grid-template-columns: 330px 1fr;
-      gap: 12px;
-      padding: 12px 18px 24px;
-    }
-
-    @media (max-width: 920px) {
-      .main-grid { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
 
     .card {
-      background: var(--panel);
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+    }
+    .card h2 {
+      font-size: 1.05rem; margin-bottom: 14px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 10px;
+    }
+
+    /* Stock Management inside Portfolio */
+    .stock-list-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;
+    }
+    .stock-cards-container {
+      display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; margin-bottom: 16px; padding-right: 4px;
+    }
+    .stock-row-card {
+      background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+      display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.1fr auto; gap: 10px; align-items: center;
+      cursor: pointer; transition: border-color 0.15s;
+    }
+    .stock-row-card:hover, .stock-row-card.active { border-color: var(--accent); background: #131d35; }
+    @media (max-width: 600px) { .stock-row-card { grid-template-columns: 1fr 1fr; } }
+
+    .dot {
+      width: 9px; height: 9px; border-radius: 50%; display: inline-block;
+    }
+    .dot.green { background: var(--green); }
+    .dot.yellow { background: var(--yellow); }
+    .dot.red { background: var(--red); }
+
+    .form-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    @media (max-width: 540px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .field-group { margin-bottom: 10px; }
+    .helper-note {
+      font-size: 0.72rem; color: var(--muted); margin-top: 4px; line-height: 1.35;
+    }
+    .helper-bar {
+      background: #0f172a; border: 1px dashed var(--border); border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 12px; display: flex; flex-wrap: wrap;
+      gap: 8px; align-items: center; font-size: 0.78rem;
+    }
+
+    /* Traffic Light Banner */
+    .signal-banner {
+      border-radius: 12px; padding: 18px; margin-bottom: 18px; border: 1px solid;
+      display: flex; align-items: flex-start; gap: 16px;
+    }
+    .signal-banner.green { background: var(--green-bg); border-color: var(--green); }
+    .signal-banner.yellow { background: var(--yellow-bg); border-color: var(--yellow); }
+    .signal-banner.red { background: var(--red-bg); border-color: var(--red); }
+
+    .traffic-light {
+      background: #0b1120; padding: 8px; border-radius: 12px; border: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 7px; flex-shrink: 0;
+    }
+    .bulb {
+      width: 22px; height: 22px; border-radius: 50%; opacity: 0.2; transition: all 0.2s;
+    }
+    .bulb.red { background: var(--red); }
+    .bulb.yellow { background: var(--yellow); }
+    .bulb.green { background: var(--green); }
+    .bulb.lit { opacity: 1; box-shadow: 0 0 14px currentColor; }
+
+    .signal-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 4px; }
+    .signal-banner.green .signal-title { color: var(--green); }
+    .signal-banner.yellow .signal-title { color: var(--yellow); }
+    .signal-banner.red .signal-title { color: var(--red); }
+    .signal-desc { font-size: 0.88rem; color: #e2e8f0; }
+
+    /* Checklist */
+    .checklist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+    .check-item {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      background: #0f172a; padding: 9px 12px; border-radius: 8px; font-size: 0.86rem;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
     }
-
-    .tabs {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 10px;
+    .pill {
+      padding: 2px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; white-space: nowrap;
     }
+    .pill.pass { background: var(--green-bg); color: var(--green); }
+    .pill.warn { background: var(--yellow-bg); color: var(--yellow); }
+    .pill.fail { background: var(--red-bg); color: var(--red); }
 
-    .tab {
-      flex: 1;
-      text-align: center;
-      padding: 6px;
-      font-size: 0.8rem;
+    /* Trade Plan Metrics */
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px;
     }
-
-    .tab.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
+    @media (max-width: 540px) { .metrics-grid { grid-template-columns: 1fr; } }
+    .metric-box {
+      background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 12px;
     }
+    .metric-box span { display: block; font-size: 0.75rem; color: var(--muted); }
+    .metric-box strong { font-size: 1.05rem; font-weight: 800; margin-top: 2px; display: block; }
 
-    .stock-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 10px;
-      margin-top: 6px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--panel-2);
-      cursor: pointer;
+    .charts-stack { display: grid; grid-template-columns: 1fr; gap: 18px; margin-top: 16px; }
+    .chart-wrap {
+      background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+      height: 240px; position: relative;
     }
-
-    .stock-item.active {
-      border-color: var(--accent);
+    footer {
+      margin-top: 28px; text-align: center; color: var(--muted); font-size: 0.8rem;
     }
-
-    .badge {
-      padding: 2px 7px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 700;
-    }
-
-    .badge.GREEN { background: var(--green-bg); color: #86efac; border: 1px solid rgba(34,197,94,0.4); }
-    .badge.YELLOW { background: var(--yellow-bg); color: #fde047; border: 1px solid rgba(234,179,8,0.4); }
-    .badge.RED { background: var(--red-bg); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
-
-    .sig-banner {
-      padding: 10px 12px;
-      border-radius: 7px;
-      border: 1px solid var(--border);
-      margin-bottom: 10px;
-    }
-
-    .sig-banner.GREEN { background: var(--green-bg); border-color: rgba(34,197,94,0.45); }
-    .sig-banner.YELLOW { background: var(--yellow-bg); border-color: rgba(234,179,8,0.45); }
-    .sig-banner.RED { background: var(--red-bg); border-color: rgba(239,68,68,0.45); }
-
-    .kpi-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    @media (max-width: 640px) {
-      .kpi-3 { grid-template-columns: 1fr; }
-    }
-
-    .kpi {
-      background: var(--panel-2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 10px;
-    }
-
-    .kpi .k-lbl { font-size: 0.72rem; color: var(--muted); }
-    .kpi .k-val { font-size: 0.96rem; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
-
-    .editor-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    @media (max-width: 640px) {
-      .editor-grid { grid-template-columns: 1fr; }
-    }
-
-    .fld { display: flex; flex-direction: column; gap: 3px; }
-    .fld label { font-size: 0.74rem; color: var(--muted); }
-
-    .tool-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-      margin-top: 10px;
-      padding: 8px 10px;
-      border-radius: 6px;
-      background: #0b1120;
-      border: 1px dashed var(--border);
-      font-size: 0.76rem;
-    }
-
-    .muted { color: var(--muted); font-size: 0.76rem; }
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="topbar-left">
-      <span class="topbar-title">CAN SLIM Dashboard (index_v6.html)</span>
-      <span class="muted">4–8 Leaders · Manual + Auto N/M</span>
-    </div>
-    <div class="topbar-actions">
-      <input id="apiKeyInput" type="password" placeholder="Finnhub API Key" style="width: 175px;" />
-      <button id="saveKeyBtn">Save Key</button>
-      <button id="syncBtn" class="primary">Sync SPY/QQQ &amp; Quote</button>
-      <button id="exportJsonBtn" class="warn">Export JSON</button>
-      <button id="importJsonBtn">Import JSON</button>
-      <button id="resetDefaultsBtn" class="danger">Reset Defaults</button>
-      <input id="importFileInput" type="file" accept="application/json,.json" style="display:none;" />
-    </div>
-  </div>
-
-  <div class="strip">
-    <div class="pill-row">
-      <span class="pill" id="spyPill">SPY: --</span>
-      <span class="pill" id="qqqPill">QQQ: --</span>
-      <span class="muted" id="mStatusNote">M respects manual selection unless synced without override.</span>
-    </div>
-    <div style="display:flex; align-items:center; gap:6px;">
-      <label for="mSelect" class="muted">M — Market Trend:</label>
-      <select id="mSelect">
-        <option value="uptrend">Confirmed Uptrend (Green)</option>
-        <option value="choppy">Uptrend Under Pressure / Choppy</option>
-        <option value="correction">Market in Correction</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="diag" id="diagBox">
-    Diagnostic: Ready. Use Export JSON / Import JSON to back up or restore your state, or Reset Defaults anytime.
-  </div>
-
-  <div class="main-grid">
-    <div class="card">
-      <div class="tabs">
-        <button class="tab active" data-tab="watchlist">Watchlist</button>
-        <button class="tab" data-tab="portfolio">Self Portfolio</button>
+  <div class="container">
+    <header>
+      <div>
+        <h1>CAN SLIM Multi-Portfolio Analyzer &amp; Signal Calculator</h1>
+        <p>Automated quote, fundamental, volume &amp; RS estimation via Finnhub with SPY/QQQ M &amp; automated N helpers</p>
       </div>
-      <div style="display:flex; gap:6px;">
-        <input id="addTickerInput" type="text" placeholder="Add symbol (e.g., ABBV)" style="flex:1; text-transform:uppercase;" />
-        <button id="addTickerBtn" class="primary">Add</button>
+      <div class="badge-book">Auto-Sync Finnhub Engine v5 &bull; Override-Safe N &amp; M</div>
+    </header>
+
+    <!-- Broad Market Benchmark Strip (SPY / QQQ) -->
+    <div class="market-strip">
+      <div class="bench-group">
+        <span class="bench-chip" id="spyQuoteChip">SPY: --</span>
+        <span class="bench-chip" id="qqqQuoteChip">QQQ: --</span>
+        <span class="helper-note" id="marketAutoHint" style="margin-top:0;">Sync SPY/QQQ to check benchmark tape; manual M selection is preserved unless unlocked.</span>
       </div>
-      <div id="stockList"></div>
-      <div class="muted" id="healthLine" style="margin-top:10px;">Health: --</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-secondary" id="syncBenchmarksBtn" type="button" style="padding:6px 12px; font-size:0.8rem;">Sync SPY &amp; QQQ</button>
+      </div>
     </div>
 
-    <div class="card" id="detailCard"></div>
+    <!-- Global API & Portfolio Settings Bar -->
+    <div class="top-control-bar">
+      <div class="field-group">
+        <label for="finnhubKey">Finnhub.io API Key (Saved in Browser)</label>
+        <input type="password" id="finnhubKey" placeholder="Paste Finnhub API key for auto-fetch..." />
+      </div>
+      <div class="field-group">
+        <label for="portfolioCapital">Active Portfolio Total Capital ($)</label>
+        <input type="number" id="portfolioCapital" step="1000" value="50000" />
+      </div>
+      <div class="field-group">
+        <label for="newPortfolioName">Create New Portfolio</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="newPortfolioName" placeholder="e.g. Core Leaders" />
+          <button class="btn" id="createPortfolioBtn" type="button">+ Add</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-secondary" id="refreshAllBtn" type="button" title="Refresh all stocks in active portfolio from Finnhub">Refresh Portfolio</button>
+        <button class="btn btn-secondary" id="resetDefaultsBtn" type="button" title="Reset saved portfolios to fresh defaults">Reset Defaults</button>
+        <button class="btn btn-danger" id="deletePortfolioBtn" type="button" title="Delete current portfolio">Delete Portfolio</button>
+        <button class="btn btn-secondary" id="exportBtn" type="button" title="Export portfolios to JSON file">Export Data</button>
+        <label class="btn btn-secondary" style="cursor:pointer; margin-bottom:0; display:inline-flex; align-items:center;">
+          Import Data <input type="file" id="importFile" accept=".json" style="display:none;" />
+        </label>
+      </div>
+      <div class="status-msg" id="statusMsg">Ready. Uses v5 storage with override-safe N (price/pivot/RS) and SPY/QQQ M assistance.</div>
+    </div>
+
+    <!-- Portfolio Tabs Bar -->
+    <div class="portfolio-tabs" id="portfolioTabs"></div>
+
+    <div class="grid">
+      <!-- Left Column: Portfolio Stock List & Quick Add -->
+      <div class="card">
+        <h2>
+          <span>Portfolio Stocks (<span id="portfolioTitleCount">0</span>)</span>
+          <span style="font-size:0.82rem; color:var(--accent);" id="activePortfolioLabel">Tech Growth</span>
+        </h2>
+
+        <!-- Quick Add / Fetch Ticker -->
+        <div style="background:#0f172a; border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:14px;">
+          <label style="display:block; font-size:0.78rem; color:var(--muted); margin-bottom:5px; font-weight:600;">Add &amp; Auto-Fetch Stock Data</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="quickTicker" placeholder="e.g. MSFT, TSM, J, NVDA, ABBV" style="text-transform:uppercase;" />
+            <button class="btn" id="addStockBtn" type="button">Fetch &amp; Add</button>
+          </div>
+          <div class="helper-note">Calls Finnhub <code>/quote</code> and <code>/stock/metric</code> (skips <code>/stock/candle</code> when blocked by free-tier HTTP 403). Volume Surge and RS stay editable manually.</div>
+        </div>
+
+        <div class="stock-list-header">
+          <span style="font-size:0.82rem; color:var(--muted); font-weight:600;">Click a stock to inspect or manually override values:</span>
+          <button class="btn btn-secondary" id="refreshSelectedBtn" type="button" style="padding:5px 10px; font-size:0.76rem;">Sync Selected Ticker</button>
+        </div>
+
+        <div class="stock-cards-container" id="stockCardsContainer"></div>
+
+        <!-- Selected Stock Edit Form -->
+        <div style="border-top:1px solid var(--border); padding-top:14px; margin-top:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; flex-wrap:wrap;">
+            <div>
+              <strong id="editingStockTitle" style="font-size:0.95rem; color:var(--accent);">Editing: None</strong>
+              <span class="helper-note" id="nModeBadge" style="display:inline; margin-left:8px;"></span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-secondary" id="reAutoNBtn" type="button" style="padding:4px 10px; font-size:0.76rem;">Auto N</button>
+              <button class="btn btn-danger" id="removeStockBtn" type="button" style="padding:4px 10px; font-size:0.78rem;">Remove Stock</button>
+            </div>
+          </div>
+
+          <div class="helper-bar">
+            <span style="color:var(--muted); font-weight:600;">6M RS Helper:</span>
+            <input type="number" id="rsStartInput" step="0.01" placeholder="~6M Ago Price ($)" style="width:130px; padding:6px 8px; font-size:0.8rem;" />
+            <input type="number" id="rsEndInput" step="0.01" placeholder="Current Price ($)" style="width:130px; padding:6px 8px; font-size:0.8rem;" />
+            <button class="btn btn-secondary" id="applyEstRsBtn" type="button" style="padding:6px 10px; font-size:0.78rem;">Apply 6M RS</button>
+          </div>
+
+          <div class="form-grid">
+            <div class="field-group">
+              <label for="marketTrend">M &mdash; General Market Trend</label>
+              <select id="marketTrend">
+                <option value="uptrend">Confirmed Uptrend (Green)</option>
+                <option value="choppy" selected>Uptrend Under Pressure / Choppy</option>
+                <option value="correction">Market in Correction (4+ Dist. Days)</option>
+              </select>
+              <div class="helper-note" id="mOverrideNote">Manual override protects your market read unless Auto M sync runs without override.</div>
+            </div>
+
+            <div class="field-group">
+              <label for="chartSetup">N &mdash; Chart Base &amp; Pivot Status (Auto + Override)</label>
+              <select id="chartSetup">
+                <option value="breakout">Proper Breakout (0% to +5% of Pivot)</option>
+                <option value="building" selected>Constructive Base Building (Wait)</option>
+                <option value="extended">Extended (&gt;5% Past Pivot - Do Not Chase)</option>
+                <option value="downtrend">Broken / Below Key Moving Averages</option>
+              </select>
+              <div class="helper-note">Auto-suggested from Price vs. Pivot &amp; RS; editing manually locks your override.</div>
+            </div>
+
+            <div class="field-group">
+              <label for="price">Current Stock Price ($)</label>
+              <input type="number" id="price" step="0.01" value="0" />
+            </div>
+
+            <div class="field-group">
+              <label for="pivotPrice">Breakout Pivot / 52-Wk High ($)</label>
+              <input type="number" id="pivotPrice" step="0.01" value="0" />
+            </div>
+
+            <div class="field-group">
+              <label for="qEps">C &mdash; Current Quarterly EPS YoY (%)</label>
+              <input type="number" id="qEps" step="0.1" value="0" />
+            </div>
+
+            <div class="field-group">
+              <label for="aEps">A &mdash; 3-Yr Annual EPS Growth (%)</label>
+              <input type="number" id="aEps" step="0.1" value="0" />
+            </div>
+
+            <div class="field-group">
+              <label for="roe">A &mdash; Return on Equity / ROE (%)</label>
+              <input type="number" id="roe" step="0.1" value="0" />
+            </div>
+
+            <div class="field-group">
+              <label for="volSurge">S &mdash; Breakout Volume vs Avg (%)</label>
+              <input type="number" id="volSurge" step="0.1" value="0" />
+              <div class="helper-note">Enter Fidelity volume surge % directly when daily candles are unavailable.</div>
+            </div>
+
+            <div class="field-group">
+              <label for="rsRating">L &mdash; Relative Strength Rating (1&ndash;99)</label>
+              <input type="number" id="rsRating" min="1" max="99" value="50" />
+              <div class="helper-note">Use the 6M RS helper above or enter your RS rating (1&ndash;99).</div>
+            </div>
+
+            <div class="field-group">
+              <label for="instSponsorship">I &mdash; Institutional Sponsorship</label>
+              <select id="instSponsorship">
+                <option value="strong">Strong Fund Accumulation</option>
+                <option value="moderate" selected>Moderate / Stable Ownership</option>
+                <option value="weak">Weak / Low-Priced Speculative</option>
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label for="allocPct">Target Position Weight (%)</label>
+              <input type="number" id="allocPct" min="1" max="100" value="20" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Signal, Risk Plan & Charts -->
+      <div class="card">
+        <h2>
+          <span>O&rsquo;Neil Signal &amp; Risk Plan</span>
+          <span id="scoreBadge" style="font-size:0.85rem; color:var(--muted);">Score: -- / 100</span>
+        </h2>
+
+        <div class="signal-banner yellow" id="signalBanner">
+          <div class="traffic-light">
+            <div class="bulb red" id="bulbRed"></div>
+            <div class="bulb yellow lit" id="bulbYellow"></div>
+            <div class="bulb green" id="bulbGreen"></div>
+          </div>
+          <div>
+            <div class="signal-title" id="signalTitle">SELECT A STOCK</div>
+            <div class="signal-desc" id="signalDesc">Choose a stock from your portfolio list to inspect CAN SLIM analysis.</div>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <span>Suggested Shares &amp; Cost</span>
+            <strong id="posShares">0 sh ($0)</strong>
+          </div>
+          <div class="metric-box">
+            <span style="color:var(--red);">Hard Stop-Loss (-7.5%)</span>
+            <strong id="stopPrice" style="color:var(--red);">$0.00</strong>
+          </div>
+          <div class="metric-box">
+            <span style="color:var(--green);">Profit Target (+20% to +25%)</span>
+            <strong id="targetPrice" style="color:var(--green);">$0.00</strong>
+          </div>
+        </div>
+
+        <div class="checklist" id="checklist"></div>
+
+        <div class="charts-stack">
+          <div class="chart-wrap">
+            <canvas id="radarChart"></canvas>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="riskChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Portfolio-Wide Aggregated Analysis Card -->
+    <div class="card" style="margin-top: 20px; grid-column: 1 / -1;">
+      <h2>
+        <span>CAN SLIM Portfolio-Wide Analysis &amp; Health Score</span>
+        <span id="portfolioScoreBadge" style="font-size:0.85rem; color:var(--accent);">Overall Health: --</span>
+      </h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px;">
+        <div class="metric-box">
+          <span>Avg. Quarterly EPS Growth</span>
+          <strong id="portAvgQeps">--%</strong>
+        </div>
+        <div class="metric-box">
+          <span>Avg. Return on Equity (ROE)</span>
+          <strong id="portAvgRoe">--%</strong>
+        </div>
+        <div class="metric-box">
+          <span>Avg. Relative Strength (RS)</span>
+          <strong id="portAvgRs">--</strong>
+        </div>
+        <div class="metric-box">
+          <span>Total Capital Allocated</span>
+          <strong id="portAllocatedCapital">$0 / $0</strong>
+        </div>
+        <div class="metric-box">
+          <span>Portfolio Risk Exposure (-7.5%)</span>
+          <strong id="portTotalRisk" style="color:var(--red);">$0.00</strong>
+        </div>
+      </div>
+
+      <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 14px;">
+        <strong style="font-size: 0.9rem; color: var(--accent); display: block; margin-bottom: 6px;">Portfolio Structure &amp; O&rsquo;Neil Compliance Review:</strong>
+        <p id="portAnalysisSummary" style="font-size: 0.86rem; color: var(--muted); line-height: 1.5;">
+          Select or populate a portfolio to analyze aggregate growth momentum, sector concentration, and risk exposure.
+        </p>
+      </div>
+    </div>
+
+    <footer>
+      CAN SLIM Multi-Portfolio Analyzer &bull; Automated metrics are estimates from API data and should be verified on a chart before trading. Not financial advice.
+    </footer>
   </div>
 
   <script>
-    const STORAGE_KEY = "canslim_dashboard_v6_state";
-    const KEY_STORAGE = "canslim_finnhub_key_v1";
+    const STORAGE_KEY = "canslim_portfolios_v5";
 
-    const DEFAULT_STATE = {
-      activeTab: "watchlist",
-      marketTrend: "choppy",
-      manualMarketOverride: false,
-      capitalPool: 50000,
-      selectedByTab: { watchlist: "ABBV", portfolio: "ABBV" },
-      watchlist: [
-        {
-          symbol: "ABBV", price: 286.01, pivot: 302.93, high52: 302.93,
-          qEps: 105.0, aEps: 28.0, roe: 30.1, rsRating: 92, volSurge: -25,
-          chartSetup: "base", manualChartOverride: false, instSponsorship: "strong", weightPct: 20
-        },
-        {
-          symbol: "CSCO", price: 97.18, pivot: 130.37, high52: 130.37,
-          qEps: 59.75, aEps: 12.0, roe: 30.1, rsRating: 30, volSurge: 5,
-          chartSetup: "downtrend", manualChartOverride: true, instSponsorship: "strong", weightPct: 20
-        },
-        {
-          symbol: "NVDA", price: 150.96, pivot: 243.37, high52: 243.37,
-          qEps: 107.1, aEps: 45.0, roe: 55.0, rsRating: 15, volSurge: -10,
-          chartSetup: "downtrend", manualChartOverride: true, instSponsorship: "strong", weightPct: 20
-        }
-      ],
-      portfolio: [
-        {
-          symbol: "ABBV", price: 286.01, pivot: 302.93, high52: 302.93,
-          qEps: 105.0, aEps: 28.0, roe: 30.1, rsRating: 92, volSurge: -25,
-          chartSetup: "base", manualChartOverride: false, instSponsorship: "strong", weightPct: 25
-        }
-      ]
-    };
-
-    let state = loadState();
-
-    function loadState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return structuredClone(DEFAULT_STATE);
-        return { ...structuredClone(DEFAULT_STATE), ...JSON.parse(raw) };
-      } catch {
-        return structuredClone(DEFAULT_STATE);
+    const DEFAULT_PORTFOLIOS = [
+      {
+        id: "tech-growth",
+        name: "Tech Growth Portfolio",
+        capital: 50000,
+        manualMarketOverride: false,
+        stocks: [
+          { ticker: "MSFT", marketTrend: "choppy", manualChartOverride: false, chartSetup: "building", price: 508.29, pivotPrice: 559.15, qEps: 32.37, aEps: 22.83, roe: 33.21, volSurge: 22.5, rsRating: 80, instSponsorship: "strong", allocPct: 20 },
+          { ticker: "TSM", marketTrend: "choppy", manualChartOverride: false, chartSetup: "building", price: 362.62, pivotPrice: 487.47, qEps: 35.0, aEps: 26.0, roe: 28.0, volSurge: 48.0, rsRating: 84, instSponsorship: "strong", allocPct: 20 }
+        ]
+      },
+      {
+        id: "defensive-income",
+        name: "Core Watchlist",
+        capital: 30000,
+        manualMarketOverride: false,
+        stocks: [
+          { ticker: "J", marketTrend: "choppy", manualChartOverride: false, chartSetup: "building", price: 158.23, pivotPrice: 162.00, qEps: -22.95, aEps: 14.0, roe: 18.5, volSurge: -8.0, rsRating: 75, instSponsorship: "strong", allocPct: 20 }
+        ]
       }
+    ];
+
+    function cloneDefaults() {
+      return JSON.parse(JSON.stringify(DEFAULT_PORTFOLIOS));
     }
+
+    let portfolios = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || cloneDefaults();
+    let activePortfolioId = portfolios[0] ? portfolios[0].id : "tech-growth";
+    let activeTicker = portfolios[0] && portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
+
+    let radarChartInstance = null;
+    let riskChartInstance = null;
+
+    const el = (id) => document.getElementById(id);
+
+    el("finnhubKey").value = localStorage.getItem("canslim_finnhub_key") || "";
+    el("finnhubKey").addEventListener("input", (e) => {
+      localStorage.setItem("canslim_finnhub_key", e.target.value.trim());
+    });
 
     function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolios));
     }
 
-    function setDiag(msg) {
-      document.getElementById("diagBox").textContent = `Diagnostic: ${msg}`;
-    }
-
-    function suggestChartSetup(stock) {
-      const price = Number(stock.price) || 0;
-      const pivot = Number(stock.pivot) || Number(stock.high52) || price;
-      const rs = Number(stock.rsRating) || 0;
-      if (!price || !pivot) return stock.chartSetup || "base";
-      const pctFromPivot = ((price - pivot) / pivot) * 100;
-      if (pctFromPivot >= -1 && pctFromPivot <= 5 && rs >= 75) return "breakout";
-      if (pctFromPivot <= -15 || rs < 50) return "downtrend";
-      return "base";
+    function suggestChartSetup(price, pivot, rs = 80) {
+      const p = Number(price) || 0;
+      const pv = Number(pivot) || 0;
+      const r = Number(rs) || 0;
+      if (!p || !pv || pv <= 0) return "building";
+      const pctFromPivot = ((p - pv) / pv) * 100;
+      if (pctFromPivot > 5) return "extended";
+      if (pctFromPivot >= -1 && pctFromPivot <= 5 && r >= 75) return "breakout";
+      if (pctFromPivot <= -15 || r < 50) return "downtrend";
+      return "building";
     }
 
     function estimateSixMonthRS(startPrice, endPrice) {
@@ -387,376 +544,791 @@
       return Math.max(1, Math.min(99, Math.round(50 + pct * 1.1)));
     }
 
-    function computeSignal(stock, mTrend) {
-      const price = Number(stock.price) || 0;
-      const qEps = Number(stock.qEps) || 0;
-      const vol = Number(stock.volSurge) || 0;
-      const rs = Number(stock.rsRating) || 0;
-      const setup = stock.chartSetup || "base";
-      const spons = stock.instSponsorship || "strong";
-
-      if (price < 15 || qEps < 10 || setup === "downtrend" || spons === "weak") {
-        return { code: "RED", title: "RED — AVOID / SELL & PROTECT CAPITAL", detail: "Disqualifier active (price < $15, qEPS < 10%, downtrend chart, or weak sponsorship)." };
-      }
-      if (mTrend === "uptrend" && setup === "breakout" && vol >= 40 && rs >= 80 && qEps >= 25) {
-        return { code: "GREEN", title: "GREEN — BUY BREAKOUT (WITH 7.5% STOP)", detail: "Confirmed uptrend, proper pivot breakout, high volume (>= +40%), and RS >= 80." };
-      }
-      return { code: "YELLOW", title: "YELLOW — WATCHLIST / HOLD & WAIT", detail: "No hard red trigger, but market trend (M), pivot timing (N), or volume surge (S) is not yet green." };
-    }
-
-    function computeScore(stock, mTrend) {
-      let sc = 0;
-      if ((Number(stock.price) || 0) >= 15) sc += 15;
-      if ((Number(stock.qEps) || 0) >= 25) sc += 20;
-      else if ((Number(stock.qEps) || 0) >= 10) sc += 10;
-      if ((Number(stock.aEps) || 0) >= 25 && (Number(stock.roe) || 0) >= 17) sc += 15;
-      else if ((Number(stock.roe) || 0) >= 17) sc += 8;
-      if (stock.chartSetup === "breakout") sc += 15;
-      else if (stock.chartSetup === "base") sc += 8;
-      if ((Number(stock.volSurge) || 0) >= 40) sc += 15;
-      else if ((Number(stock.volSurge) || 0) >= 0) sc += 6;
-      if ((Number(stock.rsRating) || 0) >= 80 && stock.instSponsorship === "strong") sc += 15;
-      else if ((Number(stock.rsRating) || 0) >= 60) sc += 7;
-      if (mTrend === "uptrend") sc += 5;
-      else if (mTrend === "choppy") sc += 2;
-      return Math.min(100, sc);
-    }
-
-    function activeList() {
-      return state[state.activeTab] || state.watchlist;
-    }
-
-    function selectedStock() {
-      const list = activeList();
-      const sym = state.selectedByTab[state.activeTab];
-      return list.find((s) => s.symbol === sym) || list[0] || null;
-    }
-
-    function render() {
-      document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === state.activeTab));
-      document.getElementById("mSelect").value = state.marketTrend;
-
-      const list = activeList();
-      const sel = selectedStock();
-      if (sel) state.selectedByTab[state.activeTab] = sel.symbol;
-
-      const listEl = document.getElementById("stockList");
-      listEl.innerHTML = "";
-      let sum = 0;
-
-      list.forEach((st) => {
-        const sig = computeSignal(st, state.marketTrend);
-        const sc = computeScore(st, state.marketTrend);
-        sum += sc;
-        const row = document.createElement("div");
-        row.className = "stock-item" + (sel && sel.symbol === st.symbol ? " active" : "");
-        row.innerHTML = `
-          <div>
-            <strong>${st.symbol}</strong> · $${Number(st.price).toFixed(2)}<br />
-            <span class="muted">RS ${st.rsRating} · Vol ${Number(st.volSurge) >= 0 ? "+" : ""}${st.volSurge}% · ${sc}/100</span>
-          </div>
-          <span class="badge ${sig.code}">${sig.code}</span>
-        `;
-        row.onclick = () => {
-          state.selectedByTab[state.activeTab] = st.symbol;
-          saveState();
-          render();
-        };
-        listEl.appendChild(row);
-      });
-
-      const avg = list.length ? Math.round(sum / list.length) : 0;
-      document.getElementById("healthLine").textContent = `Average Health: ${avg} / 100 (${list.length} tickers)`;
-
-      renderDetail(sel);
+    el("resetDefaultsBtn").addEventListener("click", () => {
+      portfolios = cloneDefaults();
+      activePortfolioId = portfolios[0].id;
+      activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
       saveState();
-    }
-
-    function renderDetail(st) {
-      const card = document.getElementById("detailCard");
-      if (!st) {
-        card.innerHTML = "<p>No stocks in list.</p>";
-        return;
-      }
-
-      const sig = computeSignal(st, state.marketTrend);
-      const sc = computeScore(st, state.marketTrend);
-      const p = Number(st.price) || 0;
-      const alloc = (Number(state.capitalPool) || 50000) * ((Number(st.weightPct) || 20) / 100);
-      const sh = p > 0 ? Math.floor(alloc / p) : 0;
-      const autoN = suggestChartSetup(st);
-
-      card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-          <div>
-            <strong>${st.symbol}</strong> · <span class="muted">Auto N: <strong>${autoN}</strong> ${st.manualChartOverride ? "(Manual)" : "(Auto)"}</span>
-          </div>
-          <strong>Score: ${sc} / 100</strong>
-        </div>
-
-        <div class="sig-banner ${sig.code}">
-          <div style="font-weight:700;">${sig.title}</div>
-          <div class="muted" style="color:inherit; margin-top:2px;">${sig.detail}</div>
-        </div>
-
-        <div class="kpi-3">
-          <div class="kpi">
-            <div class="k-lbl">Position Size (${st.weightPct}%)</div>
-            <div class="k-val">${sh} sh ($${Math.round(alloc).toLocaleString()})</div>
-          </div>
-          <div class="kpi">
-            <div class="k-lbl">Hard Stop (-7.5%)</div>
-            <div class="k-val">$${(p * 0.925).toFixed(2)}</div>
-          </div>
-          <div class="kpi">
-            <div class="k-lbl">Target (+20% to +25%)</div>
-            <div class="k-val">$${(p * 1.2).toFixed(2)} – $${(p * 1.25).toFixed(2)}</div>
-          </div>
-        </div>
-
-        <div class="editor-grid">
-          <div class="fld">
-            <label>Price ($)</label>
-            <input id="in_price" type="number" step="0.01" value="${st.price}" />
-          </div>
-          <div class="fld">
-            <label>Pivot / 52-Wk High ($)</label>
-            <input id="in_pivot" type="number" step="0.01" value="${st.pivot}" />
-          </div>
-          <div class="fld">
-            <label>C — Qtr EPS YoY (%)</label>
-            <input id="in_qEps" type="number" step="0.1" value="${st.qEps}" />
-          </div>
-          <div class="fld">
-            <label>A — Ann EPS (%) &amp; ROE (%)</label>
-            <div style="display:flex; gap:6px;">
-              <input id="in_aEps" type="number" step="0.1" value="${st.aEps}" style="width:50%;" />
-              <input id="in_roe" type="number" step="0.1" value="${st.roe}" style="width:50%;" />
-            </div>
-          </div>
-          <div class="fld">
-            <label>L — RS Rating (1–99)</label>
-            <input id="in_rs" type="number" min="1" max="99" value="${st.rsRating}" />
-          </div>
-          <div class="fld">
-            <label>S — Vol Surge vs Avg (%)</label>
-            <input id="in_vol" type="number" step="1" value="${st.volSurge}" />
-          </div>
-          <div class="fld">
-            <label>N — Chart Base &amp; Pivot Status</label>
-            <select id="in_setup">
-              <option value="breakout" ${st.chartSetup === "breakout" ? "selected" : ""}>Proper Breakout (0% to +5% of Pivot)</option>
-              <option value="base" ${st.chartSetup === "base" ? "selected" : ""}>Constructive Base Building (Wait)</option>
-              <option value="downtrend" ${st.chartSetup === "downtrend" ? "selected" : ""}>Broken / Below Key Moving Averages</option>
-            </select>
-          </div>
-          <div class="fld">
-            <label>I — Institutional Sponsorship</label>
-            <select id="in_spons">
-              <option value="strong" ${st.instSponsorship === "strong" ? "selected" : ""}>Strong / Increasing</option>
-              <option value="neutral" ${st.instSponsorship === "neutral" ? "selected" : ""}>Neutral / Mixed</option>
-              <option value="weak" ${st.instSponsorship === "weak" ? "selected" : ""}>Weak / Distribution</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="tool-strip">
-          <span class="muted">6M RS Estimator:</span>
-          <input id="rs_start" type="number" step="0.01" placeholder="~6M Ago $" style="width:110px;" />
-          <input id="rs_end" type="number" step="0.01" value="${st.price}" style="width:110px;" />
-          <button id="calcRsBtn">Apply RS</button>
-          <button id="reAutoNBtn">Auto N</button>
-        </div>
-      `;
-
-      const bind = (id, key, isInt = false) => {
-        const el = document.getElementById(id);
-        el.oninput = () => {
-          const n = Number(el.value);
-          st[key] = isInt ? Math.round(n) : n;
-          if (!st.manualChartOverride && (key === "price" || key === "pivot" || key === "rsRating")) {
-            st.chartSetup = suggestChartSetup(st);
-          }
-          render();
-        };
-      };
-
-      bind("in_price", "price");
-      bind("in_pivot", "pivot");
-      bind("in_qEps", "qEps");
-      bind("in_aEps", "aEps");
-      bind("in_roe", "roe");
-      bind("in_rs", "rsRating", true);
-      bind("in_vol", "volSurge");
-
-      document.getElementById("in_setup").onchange = (e) => {
-        st.chartSetup = e.target.value;
-        st.manualChartOverride = true;
-        render();
-      };
-
-      document.getElementById("in_spons").onchange = (e) => {
-        st.instSponsorship = e.target.value;
-        render();
-      };
-
-      document.getElementById("calcRsBtn").onclick = () => {
-        const s = Number(document.getElementById("rs_start").value);
-        const e = Number(document.getElementById("rs_end").value);
-        const est = estimateSixMonthRS(s, e);
-        if (est !== null) {
-          st.rsRating = est;
-          if (!st.manualChartOverride) st.chartSetup = suggestChartSetup(st);
-          setDiag(`Set ${st.symbol} RS to ${est} from 6M move ($${s} -> $${e}).`);
-          render();
-        }
-      };
-
-      document.getElementById("reAutoNBtn").onclick = () => {
-        st.manualChartOverride = false;
-        st.chartSetup = suggestChartSetup(st);
-        setDiag(`Re-ran Auto N for ${st.symbol}: ${st.chartSetup}.`);
-        render();
-      };
-    }
-
-    document.querySelectorAll(".tab").forEach((t) => {
-      t.onclick = () => {
-        state.activeTab = t.dataset.tab;
-        render();
-      };
+      renderAll();
+      el("statusMsg").textContent = "Reset portfolios to fresh v5 defaults.";
     });
 
-    document.getElementById("mSelect").onchange = (e) => {
-      state.marketTrend = e.target.value;
-      state.manualMarketOverride = true;
-      document.getElementById("mStatusNote").textContent = "Manual M override active.";
-      render();
-    };
+    el("exportBtn").addEventListener("click", () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(portfolios, null, 2));
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "canslim_portfolios_backup.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      el("statusMsg").textContent = "Portfolios exported successfully to JSON backup.";
+    });
 
-    document.getElementById("addTickerBtn").onclick = () => {
-      const inp = document.getElementById("addTickerInput");
-      const sym = inp.value.trim().toUpperCase();
-      if (!sym) return;
-      const list = activeList();
-      if (!list.some((x) => x.symbol === sym)) {
-        const item = {
-          symbol: sym, price: 100, pivot: 105, high52: 105,
-          qEps: 25, aEps: 25, roe: 20, rsRating: 80, volSurge: 0,
-          chartSetup: "base", manualChartOverride: false, instSponsorship: "strong", weightPct: 20
-        };
-        item.chartSetup = suggestChartSetup(item);
-        list.push(item);
-        state.selectedByTab[state.activeTab] = sym;
-      }
-      inp.value = "";
-      render();
-    };
-
-    document.getElementById("saveKeyBtn").onclick = () => {
-      const k = document.getElementById("apiKeyInput").value.trim();
-      localStorage.setItem(KEY_STORAGE, k);
-      setDiag(k ? "Saved Finnhub API key." : "Cleared Finnhub API key.");
-    };
-
-    document.getElementById("syncBtn").onclick = async () => {
-      const apiKey = document.getElementById("apiKeyInput").value.trim() || localStorage.getItem(KEY_STORAGE) || "";
-      if (!apiKey) {
-        setDiag("Enter a Finnhub API key to fetch SPY, QQQ, and selected stock quotes.");
-        return;
-      }
-      localStorage.setItem(KEY_STORAGE, apiKey);
-      try {
-        const [spyR, qqqR] = await Promise.all([
-          fetch(`https://finnhub.io/api/v1/quote?symbol=SPY&token=${encodeURIComponent(apiKey)}`),
-          fetch(`https://finnhub.io/api/v1/quote?symbol=QQQ&token=${encodeURIComponent(apiKey)}`)
-        ]);
-        let avgDp = null;
-        if (spyR.ok) {
-          const spy = await spyR.json();
-          if (typeof spy.c === "number" && spy.c > 0) {
-            document.getElementById("spyPill").textContent = `SPY: $${spy.c.toFixed(2)} (${spy.dp >= 0 ? "+" : ""}${Number(spy.dp).toFixed(2)}%)`;
-            avgDp = Number(spy.dp) || 0;
-          }
-        }
-        if (qqqR.ok) {
-          const qqq = await qqqR.json();
-          if (typeof qqq.c === "number" && qqq.c > 0) {
-            document.getElementById("qqqPill").textContent = `QQQ: $${qqq.c.toFixed(2)} (${qqq.dp >= 0 ? "+" : ""}${Number(qqq.dp).toFixed(2)}%)`;
-            avgDp = avgDp !== null ? (avgDp + (Number(qqq.dp) || 0)) / 2 : (Number(qqq.dp) || 0);
-          }
-        }
-        if (avgDp !== null && !state.manualMarketOverride) {
-          if (avgDp <= -1.5) state.marketTrend = "correction";
-          else if (avgDp >= 0.75) state.marketTrend = "uptrend";
-          else state.marketTrend = "choppy";
-        }
-        const st = selectedStock();
-        if (st) {
-          const qR = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(st.symbol)}&token=${encodeURIComponent(apiKey)}`);
-          if (qR.ok) {
-            const q = await qR.json();
-            if (typeof q.c === "number" && q.c > 0) {
-              st.price = Number(q.c.toFixed(2));
-              if (!st.manualChartOverride) st.chartSetup = suggestChartSetup(st);
-            }
-          }
-        }
-        setDiag("Synced /quote for SPY, QQQ, and selected ticker.");
-        render();
-      } catch (err) {
-        setDiag(`Sync error: ${err.message}`);
-      }
-    };
-
-    document.getElementById("exportJsonBtn").onclick = () => {
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "canslim-dashboard-state.json";
-      a.click();
-      URL.revokeObjectURL(url);
-      setDiag("Exported canslim-dashboard-state.json.");
-    };
-
-    document.getElementById("importJsonBtn").onclick = () => {
-      document.getElementById("importFileInput").click();
-    };
-
-    document.getElementById("importFileInput").onchange = (e) => {
-      const file = e.target.files?.[0];
+    el("importFile").addEventListener("change", (event) => {
+      const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = function(e) {
         try {
-          const parsed = JSON.parse(String(reader.result || "{}"));
-          state = { ...structuredClone(DEFAULT_STATE), ...parsed };
-          saveState();
-          render();
-          setDiag(`Imported state from ${file.name}.`);
+          const imported = JSON.parse(e.target.result);
+          if (Array.isArray(imported) && imported.length > 0) {
+            portfolios = imported;
+            activePortfolioId = portfolios[0].id;
+            activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
+            saveState();
+            renderAll();
+            el("statusMsg").textContent = "Portfolios imported successfully!";
+          } else {
+            alert("Invalid portfolio file format.");
+          }
         } catch (err) {
-          setDiag(`Import failed: ${err.message}`);
+          alert("Error parsing JSON file: " + err.message);
         }
       };
       reader.readAsText(file);
-      e.target.value = "";
-    };
+      event.target.value = "";
+    });
 
-    document.getElementById("resetDefaultsBtn").onclick = () => {
-      localStorage.removeItem(STORAGE_KEY);
-      state = structuredClone(DEFAULT_STATE);
-      document.getElementById("spyPill").textContent = "SPY: --";
-      document.getElementById("qqqPill").textContent = "QQQ: --";
-      document.getElementById("mStatusNote").textContent = "M respects manual selection unless synced without override.";
-      setDiag("Reset to default state.");
-      render();
-    };
+    function getActivePortfolio() {
+      return portfolios.find((p) => p.id === activePortfolioId) || portfolios[0];
+    }
 
-    const existingKey = localStorage.getItem(KEY_STORAGE);
-    if (existingKey) document.getElementById("apiKeyInput").value = existingKey;
+    function getActiveStock() {
+      const p = getActivePortfolio();
+      if (!p || !p.stocks) return null;
+      return p.stocks.find((s) => s.ticker === activeTicker) || p.stocks[0] || null;
+    }
 
-    render();
+    function renderTabs() {
+      const container = el("portfolioTabs");
+      container.innerHTML = "";
+      portfolios.forEach((p) => {
+        const btn = document.createElement("button");
+        btn.className = `tab-btn ${p.id === activePortfolioId ? "active" : ""}`;
+        btn.innerHTML = `${p.name} <span class="tab-badge">${p.stocks.length}</span>`;
+        btn.onclick = () => {
+          activePortfolioId = p.id;
+          const ap = getActivePortfolio();
+          activeTicker = ap.stocks.length > 0 ? ap.stocks[0].ticker : null;
+          el("portfolioCapital").value = ap.capital;
+          renderAll();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    el("createPortfolioBtn").addEventListener("click", () => {
+      const name = el("newPortfolioName").value.trim();
+      if (!name) return;
+      const newId = "port-" + Date.now();
+      portfolios.push({
+        id: newId,
+        name: name,
+        capital: 25000,
+        manualMarketOverride: false,
+        stocks: []
+      });
+      el("newPortfolioName").value = "";
+      activePortfolioId = newId;
+      activeTicker = null;
+      saveState();
+      renderAll();
+      el("statusMsg").textContent = `Created new portfolio: "${name}"`;
+    });
+
+    el("deletePortfolioBtn").addEventListener("click", () => {
+      if (portfolios.length <= 1) {
+        alert("You must keep at least one portfolio.");
+        return;
+      }
+      if (confirm(`Are you sure you want to delete portfolio "${getActivePortfolio().name}"?`)) {
+        portfolios = portfolios.filter((p) => p.id !== activePortfolioId);
+        activePortfolioId = portfolios[0].id;
+        activeTicker = portfolios[0].stocks[0] ? portfolios[0].stocks[0].ticker : null;
+        saveState();
+        renderAll();
+        el("statusMsg").textContent = "Portfolio deleted.";
+      }
+    });
+
+    el("portfolioCapital").addEventListener("input", (e) => {
+      const p = getActivePortfolio();
+      p.capital = parseFloat(e.target.value) || 0;
+      saveState();
+      evaluateStock();
+      updatePortfolioAnalysis();
+    });
+
+    function renderStockCards() {
+      const p = getActivePortfolio();
+      el("activePortfolioLabel").textContent = p.name;
+      el("portfolioTitleCount").textContent = p.stocks.length;
+      el("portfolioCapital").value = p.capital;
+
+      const container = el("stockCardsContainer");
+      container.innerHTML = "";
+
+      if (p.stocks.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:var(--muted); padding:20px; font-size:0.85rem;">No stocks in this portfolio yet. Use the quick add box above to fetch and add stocks.</div>`;
+        return;
+      }
+
+      p.stocks.forEach((s) => {
+        const { color } = computeStockSignal(s);
+        const card = document.createElement("div");
+        card.className = `stock-row-card ${s.ticker === activeTicker ? "active" : ""}`;
+        card.innerHTML = `
+          <div>
+            <strong style="font-size:1rem; display:flex; align-items:center; gap:6px;">
+              <span class="dot ${color}"></span>${s.ticker}
+            </strong>
+            <span style="font-size:0.75rem; color:var(--muted);">Pivot: $${s.pivotPrice.toFixed(2)} | Vol: ${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%</span>
+          </div>
+          <div>
+            <span style="font-size:0.72rem; color:var(--muted);">Price</span>
+            <strong style="font-size:0.9rem;">$${s.price.toFixed(2)}</strong>
+          </div>
+          <div>
+            <span style="font-size:0.72rem; color:var(--muted);">Qtr EPS</span>
+            <strong style="font-size:0.9rem; color:${s.qEps >= 25 ? 'var(--green)' : (s.qEps >= 12 ? 'var(--yellow)' : 'var(--red)')};">${s.qEps >= 0 ? '+' : ''}${s.qEps}%</strong>
+          </div>
+          <div>
+            <span style="font-size:0.72rem; color:var(--muted);">RS / Weight</span>
+            <strong style="font-size:0.9rem;">RS ${s.rsRating} &bull; ${s.allocPct}%</strong>
+          </div>
+          <div>
+            <span class="pill ${color === 'green' ? 'pass' : (color === 'yellow' ? 'warn' : 'fail')}">${color.toUpperCase()}</span>
+          </div>
+        `;
+        card.onclick = () => {
+          activeTicker = s.ticker;
+          loadStockIntoForm(s);
+          renderStockCards();
+          evaluateStock();
+        };
+        container.appendChild(card);
+      });
+    }
+
+    function loadStockIntoForm(s) {
+      if (!s) {
+        el("editingStockTitle").textContent = "Editing: None";
+        el("nModeBadge").textContent = "";
+        return;
+      }
+      el("editingStockTitle").textContent = `Editing: ${s.ticker}`;
+      const autoN = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+      el("nModeBadge").textContent = s.manualChartOverride
+        ? `(Manual Override | Auto N: ${autoN})`
+        : `(Auto N Active: ${autoN})`;
+      el("marketTrend").value = s.marketTrend;
+      el("chartSetup").value = s.chartSetup;
+      el("price").value = s.price;
+      el("pivotPrice").value = s.pivotPrice;
+      el("qEps").value = s.qEps;
+      el("aEps").value = s.aEps;
+      el("roe").value = s.roe;
+      el("volSurge").value = s.volSurge;
+      el("rsRating").value = s.rsRating;
+      el("instSponsorship").value = s.instSponsorship;
+      el("allocPct").value = s.allocPct;
+      el("rsEndInput").value = s.price;
+    }
+
+    function updateStockFromForm(sourceId = "") {
+      const s = getActiveStock();
+      const p = getActivePortfolio();
+      if (!s) return;
+
+      if (sourceId === "marketTrend") {
+        p.manualMarketOverride = true;
+      }
+      if (sourceId === "chartSetup") {
+        s.manualChartOverride = true;
+      }
+
+      s.marketTrend = el("marketTrend").value;
+      s.chartSetup = el("chartSetup").value;
+      s.price = parseFloat(el("price").value) || 0;
+      s.pivotPrice = parseFloat(el("pivotPrice").value) || s.price;
+      s.qEps = parseFloat(el("qEps").value) || 0;
+      s.aEps = parseFloat(el("aEps").value) || 0;
+      s.roe = parseFloat(el("roe").value) || 0;
+      s.volSurge = parseFloat(el("volSurge").value) || 0;
+      s.rsRating = parseFloat(el("rsRating").value) || 50;
+      s.instSponsorship = el("instSponsorship").value;
+      s.allocPct = parseFloat(el("allocPct").value) || 20;
+
+      if (!s.manualChartOverride && (sourceId === "price" || sourceId === "pivotPrice" || sourceId === "rsRating")) {
+        s.chartSetup = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+        el("chartSetup").value = s.chartSetup;
+      }
+
+      const autoN = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+      el("nModeBadge").textContent = s.manualChartOverride
+        ? `(Manual Override | Auto N: ${autoN})`
+        : `(Auto N Active: ${autoN})`;
+
+      saveState();
+      renderStockCards();
+      evaluateStock();
+      updatePortfolioAnalysis();
+    }
+
+    document.querySelectorAll("#marketTrend, #chartSetup, #price, #pivotPrice, #qEps, #aEps, #roe, #volSurge, #rsRating, #instSponsorship, #allocPct").forEach((input) => {
+      const handler = () => updateStockFromForm(input.id);
+      input.addEventListener("input", handler);
+      input.addEventListener("change", handler);
+    });
+
+    el("reAutoNBtn").addEventListener("click", () => {
+      const s = getActiveStock();
+      if (!s) return;
+      s.manualChartOverride = false;
+      s.chartSetup = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+      el("chartSetup").value = s.chartSetup;
+      saveState();
+      renderStockCards();
+      evaluateStock();
+      updatePortfolioAnalysis();
+      el("statusMsg").textContent = `Re-ran automatic N for ${s.ticker}: ${s.chartSetup.toUpperCase()}.`;
+    });
+
+    el("applyEstRsBtn").addEventListener("click", () => {
+      const s = getActiveStock();
+      if (!s) return;
+      const startP = parseFloat(el("rsStartInput").value);
+      const endP = parseFloat(el("rsEndInput").value) || s.price;
+      const est = estimateSixMonthRS(startP, endP);
+      if (est === null) {
+        el("statusMsg").textContent = "Enter a valid ~6-month starting price to estimate RS.";
+        return;
+      }
+      s.rsRating = est;
+      el("rsRating").value = est;
+      if (!s.manualChartOverride) {
+        s.chartSetup = suggestChartSetup(s.price, s.pivotPrice, s.rsRating);
+        el("chartSetup").value = s.chartSetup;
+      }
+      saveState();
+      renderStockCards();
+      evaluateStock();
+      updatePortfolioAnalysis();
+      el("statusMsg").textContent = `Applied 6-month RS estimate (${est}) for ${s.ticker} from $${startP} to $${endP}.`;
+    });
+
+    el("removeStockBtn").addEventListener("click", () => {
+      const p = getActivePortfolio();
+      if (!activeTicker) return;
+      p.stocks = p.stocks.filter((s) => s.ticker !== activeTicker);
+      activeTicker = p.stocks[0] ? p.stocks[0].ticker : null;
+      saveState();
+      renderAll();
+      el("statusMsg").textContent = "Stock removed from portfolio.";
+    });
+
+    async function safeFetchJson(url) {
+      const res = await fetch(url);
+      let payload = null;
+      try {
+        payload = await res.json();
+      } catch {
+        payload = null;
+      }
+      return { ok: res.ok, status: res.status, data: payload };
+    }
+
+    async function fetchStockDataFromFinnhub(ticker, apiKey, existingStock = null) {
+      const base = existingStock ? { ...existingStock, ticker } : {
+        ticker,
+        marketTrend: "choppy",
+        manualChartOverride: false,
+        chartSetup: "building",
+        price: 100.00,
+        pivotPrice: 105.00,
+        qEps: 25.0,
+        aEps: 20.0,
+        roe: 18.0,
+        volSurge: 0,
+        rsRating: 80,
+        instSponsorship: "strong",
+        allocPct: 20
+      };
+
+      const [quoteRes, metricRes] = await Promise.all([
+        safeFetchJson(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${encodeURIComponent(apiKey)}`),
+        safeFetchJson(`https://finnhub.io/api/v1/stock/metric?symbol=${encodeURIComponent(ticker)}&metric=all&token=${encodeURIComponent(apiKey)}`)
+      ]);
+
+      const updatedFields = [];
+      const diagnostics = [];
+
+      if (quoteRes.ok && quoteRes.data && typeof quoteRes.data.c === "number" && quoteRes.data.c > 0) {
+        base.price = Number(quoteRes.data.c.toFixed(2));
+        updatedFields.push("Price");
+      } else {
+        diagnostics.push(`Quote HTTP ${quoteRes.status}`);
+      }
+
+      if (metricRes.ok && metricRes.data && metricRes.data.metric) {
+        const m = metricRes.data.metric;
+        if (typeof m["52WeekHigh"] === "number" && m["52WeekHigh"] > 0) {
+          base.pivotPrice = Number(m["52WeekHigh"].toFixed(2));
+          updatedFields.push("52-Wk High");
+        }
+        const qGrowth = m.epsGrowthQuarterlyYoy ?? m.quarterlyEarningsGrowthYoy ?? m.epsGrowthTTMYoy;
+        if (typeof qGrowth === "number" && Number.isFinite(qGrowth)) {
+          base.qEps = Number(qGrowth.toFixed(2));
+          updatedFields.push("Qtr EPS");
+        }
+        const aGrowth = m.epsGrowth3Y ?? m.epsGrowth5Y ?? m.epsGrowthAnnual;
+        if (typeof aGrowth === "number" && Number.isFinite(aGrowth)) {
+          base.aEps = Number(aGrowth.toFixed(2));
+          updatedFields.push("3-Yr EPS");
+        }
+        const roeVal = m.roeTTM ?? m.roeRfy;
+        if (typeof roeVal === "number" && Number.isFinite(roeVal)) {
+          base.roe = Number(roeVal.toFixed(2));
+          updatedFields.push("ROE");
+        }
+      } else {
+        diagnostics.push(`Metric HTTP ${metricRes.status}`);
+      }
+
+      if (!base.manualChartOverride) {
+        base.chartSetup = suggestChartSetup(base.price, base.pivotPrice, base.rsRating);
+        updatedFields.push("Auto N");
+      }
+
+      return {
+        stockObj: base,
+        fetchedCount: updatedFields.length,
+        updatedFields,
+        diagnostics
+      };
+    }
+
+    async function syncBenchmarks(apiKey) {
+      const [spyRes, qqqRes] = await Promise.all([
+        safeFetchJson(`https://finnhub.io/api/v1/quote?symbol=SPY&token=${encodeURIComponent(apiKey)}`),
+        safeFetchJson(`https://finnhub.io/api/v1/quote?symbol=QQQ&token=${encodeURIComponent(apiKey)}`)
+      ]);
+
+      let avgDp = null;
+      if (spyRes.ok && spyRes.data && typeof spyRes.data.c === "number" && spyRes.data.c > 0) {
+        const dp = Number(spyRes.data.dp) || 0;
+        el("spyQuoteChip").textContent = `SPY: $${spyRes.data.c.toFixed(2)} (${dp >= 0 ? "+" : ""}${dp.toFixed(2)}%)`;
+        avgDp = dp;
+      }
+      if (qqqRes.ok && qqqRes.data && typeof qqqRes.data.c === "number" && qqqRes.data.c > 0) {
+        const dp = Number(qqqRes.data.dp) || 0;
+        el("qqqQuoteChip").textContent = `QQQ: $${qqqRes.data.c.toFixed(2)} (${dp >= 0 ? "+" : ""}${dp.toFixed(2)}%)`;
+        avgDp = avgDp !== null ? (avgDp + dp) / 2 : dp;
+      }
+
+      const p = getActivePortfolio();
+      if (avgDp !== null && p && !p.manualMarketOverride) {
+        let suggestedM = "choppy";
+        if (avgDp <= -1.5) suggestedM = "correction";
+        else if (avgDp >= 0.75) suggestedM = "uptrend";
+        p.stocks.forEach((st) => {
+          st.marketTrend = suggestedM;
+        });
+        saveState();
+        el("marketAutoHint").textContent = `SPY/QQQ avg move (${avgDp >= 0 ? "+" : ""}${avgDp.toFixed(2)}%) suggests M = ${suggestedM.toUpperCase()}.`;
+      } else if (avgDp !== null && p && p.manualMarketOverride) {
+        el("marketAutoHint").textContent = `SPY/QQQ synced; manual M override kept intact.`;
+      }
+    }
+
+    el("syncBenchmarksBtn").addEventListener("click", async () => {
+      const apiKey = el("finnhubKey").value.trim();
+      if (!apiKey) {
+        el("statusMsg").textContent = "Enter a Finnhub API key first to fetch SPY and QQQ quotes.";
+        return;
+      }
+      el("statusMsg").textContent = "Syncing SPY and QQQ benchmark quotes...";
+      await syncBenchmarks(apiKey);
+      renderAll();
+      el("statusMsg").textContent = "Synced SPY and QQQ via /quote.";
+    });
+
+    function formatSyncStatus(ticker, result) {
+      const pulledText = result.updatedFields.length
+        ? `Updated [${result.updatedFields.join(", ")}]`
+        : "No new API fields returned";
+      const diagText = result.diagnostics.length ? ` | Note: ${result.diagnostics.join(", ")}` : "";
+      return `${ticker}: ${pulledText}.${diagText}`;
+    }
+
+    async function addStockToPortfolio() {
+      const ticker = el("quickTicker").value.trim().toUpperCase();
+      if (!ticker) return;
+      const apiKey = el("finnhubKey").value.trim();
+      const p = getActivePortfolio();
+
+      let stockObj = {
+        ticker,
+        marketTrend: "choppy",
+        manualChartOverride: false,
+        chartSetup: "building",
+        price: 100.00,
+        pivotPrice: 105.00,
+        qEps: 25.0,
+        aEps: 20.0,
+        roe: 18.0,
+        volSurge: 0,
+        rsRating: 80,
+        instSponsorship: "strong",
+        allocPct: 20
+      };
+
+      let statusText = `Added ${ticker} with baseline values (no Finnhub API key entered).`;
+
+      if (apiKey) {
+        el("statusMsg").textContent = `Auto-fetching quote & fundamentals for ${ticker}...`;
+        try {
+          const result = await fetchStockDataFromFinnhub(ticker, apiKey);
+          stockObj = result.stockObj;
+          statusText = formatSyncStatus(ticker, result);
+        } catch (err) {
+          statusText = `Finnhub network error for ${ticker}: ${err.message}. Added with baseline values.`;
+        }
+      }
+
+      p.stocks = p.stocks.filter((s) => s.ticker !== ticker);
+      p.stocks.push(stockObj);
+      activeTicker = ticker;
+      el("quickTicker").value = "";
+      saveState();
+      renderAll();
+      el("statusMsg").textContent = statusText;
+    }
+
+    el("refreshSelectedBtn").addEventListener("click", async () => {
+      const s = getActiveStock();
+      const apiKey = el("finnhubKey").value.trim();
+      if (!s) return;
+      if (!apiKey) {
+        el("statusMsg").textContent = "Enter a Finnhub API key at the top to auto-sync stock data.";
+        return;
+      }
+      el("statusMsg").textContent = `Refreshing ${s.ticker} from Finnhub...`;
+      try {
+        await syncBenchmarks(apiKey);
+        const result = await fetchStockDataFromFinnhub(s.ticker, apiKey, s);
+        const p = getActivePortfolio();
+        p.stocks = p.stocks.map((item) => item.ticker === s.ticker ? result.stockObj : item);
+        saveState();
+        renderAll();
+        el("statusMsg").textContent = formatSyncStatus(s.ticker, result);
+      } catch (err) {
+        el("statusMsg").textContent = `Could not refresh ${s.ticker}: ${err.message}`;
+      }
+    });
+
+    el("refreshAllBtn").addEventListener("click", async () => {
+      const p = getActivePortfolio();
+      const apiKey = el("finnhubKey").value.trim();
+      if (!p || !p.stocks.length) return;
+      if (!apiKey) {
+        el("statusMsg").textContent = "Enter a Finnhub API key at the top to auto-refresh your portfolio.";
+        return;
+      }
+      el("statusMsg").textContent = `Refreshing ${p.stocks.length} stock(s) in "${p.name}"...`;
+      await syncBenchmarks(apiKey);
+      const updated = [];
+      let totalPulled = 0;
+      for (const item of p.stocks) {
+        try {
+          const res = await fetchStockDataFromFinnhub(item.ticker, apiKey, item);
+          updated.push(res.stockObj);
+          totalPulled += res.fetchedCount;
+        } catch {
+          updated.push(item);
+        }
+      }
+      p.stocks = updated;
+      saveState();
+      renderAll();
+      el("statusMsg").textContent = `Portfolio "${p.name}" refreshed (${totalPulled} total fields updated across ${p.stocks.length} stocks).`;
+    });
+
+    el("addStockBtn").addEventListener("click", addStockToPortfolio);
+    el("quickTicker").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addStockToPortfolio();
+    });
+
+    function computeStockSignal(s) {
+      if (!s) return { color: "yellow", title: "NO STOCK SELECTED", score: 0, checks: [] };
+
+      const checks = [
+        { name: "Price Floor (O'Neil >= $15 Institutional Minimum)", status: s.price >= 15 ? "pass" : "fail", detail: `$${s.price.toFixed(2)}` },
+        { name: "C — Current Quarterly EPS Growth (>= 25% YoY)", status: s.qEps >= 25 ? "pass" : (s.qEps >= 12 ? "warn" : "fail"), detail: `${s.qEps.toFixed(1)}%` },
+        { name: "A — Annual 3-Yr EPS (>= 25%) & ROE (>= 17%)", status: (s.aEps >= 25 && s.roe >= 17) ? "pass" : ((s.aEps >= 15 || s.roe >= 17) ? "warn" : "fail"), detail: `EPS ${s.aEps.toFixed(1)}% | ROE ${s.roe.toFixed(1)}%` },
+        { name: "N — Chart Breakout Timing (0% to +5% of Pivot)", status: s.chartSetup === "breakout" ? "pass" : (s.chartSetup === "building" ? "warn" : "fail"), detail: s.chartSetup.toUpperCase() },
+        { name: "S — Breakout Volume Surge (>= +40% vs Avg)", status: s.volSurge >= 40 ? "pass" : (s.volSurge >= 10 ? "warn" : "fail"), detail: `${s.volSurge >= 0 ? "+" : ""}${s.volSurge}%` },
+        { name: "L & I — Leader RS (>= 80) & Institutional Backing", status: (s.rsRating >= 80 && s.instSponsorship === "strong") ? "pass" : (s.rsRating >= 70 ? "warn" : "fail"), detail: `RS ${s.rsRating} | ${s.instSponsorship}` },
+        { name: "M — General Market Direction", status: s.marketTrend === "uptrend" ? "pass" : (s.marketTrend === "choppy" ? "warn" : "fail"), detail: s.marketTrend.toUpperCase() }
+      ];
+
+      let score = 0;
+      checks.forEach((c) => {
+        if (c.status === "pass") score += 14.3;
+        else if (c.status === "warn") score += 7;
+      });
+      score = Math.min(100, Math.round(score));
+
+      let color = "yellow";
+      let title = "YELLOW — WATCHLIST / HOLD & WAIT";
+      let desc = "Solid underlying traits, but either the general market is not in a confirmed uptrend or the stock has not yet flashed a high-volume breakout pivot.";
+
+      const hardRed = s.price < 15 || s.qEps < 10 || s.chartSetup === "downtrend" || s.instSponsorship === "weak";
+      const allGreen = (s.marketTrend === "uptrend" && s.chartSetup === "breakout" && s.price >= 15 && s.qEps >= 25 && s.volSurge >= 40 && s.rsRating >= 80);
+
+      if (hardRed) {
+        color = "red";
+        title = "RED — AVOID / SELL & PROTECT CAPITAL";
+        desc = "Fails core CAN SLIM standards (below $15 institutional floor, weak quarterly earnings growth, or broken downtrend). Do not buy or average down.";
+      } else if (allGreen) {
+        color = "green";
+        title = "GREEN — BUY BREAKOUT (WITH 7.5% STOP)";
+        desc = "Confirmed market uptrend + strong quarterly EPS growth + high-volume breakout near pivot. Enter position and place an immediate -7.5% stop-loss.";
+      } else if (s.marketTrend === "correction") {
+        color = "yellow";
+        title = "YELLOW — MARKET IN CORRECTION (HOLD CASH)";
+        desc = "Even strong leaders fail during market corrections. Keep on watchlist and wait for a market Follow-Through Day.";
+      } else if (s.chartSetup === "extended") {
+        color = "yellow";
+        title = "YELLOW — EXTENDED PAST PIVOT (DO NOT CHASE)";
+        desc = "Stock is more than 5% above its proper buy point. Wait for a constructive pullback or new base before adding shares.";
+      }
+
+      return { color, title, desc, score, checks };
+    }
+
+    function evaluateStock() {
+      const s = getActiveStock();
+      const p = getActivePortfolio();
+      if (!s) {
+        el("scoreBadge").textContent = "Score: -- / 100";
+        el("signalTitle").textContent = "NO STOCK SELECTED";
+        el("signalDesc").textContent = "Add or select a stock from the left portfolio list.";
+        return;
+      }
+
+      const res = computeStockSignal(s);
+      el("scoreBadge").textContent = `CAN SLIM Score: ${res.score} / 100`;
+
+      const banner = el("signalBanner");
+      banner.className = `signal-banner ${res.color}`;
+      el("bulbRed").classList.toggle("lit", res.color === "red");
+      el("bulbYellow").classList.toggle("lit", res.color === "yellow");
+      el("bulbGreen").classList.toggle("lit", res.color === "green");
+      el("signalTitle").textContent = res.title;
+      el("signalDesc").textContent = res.desc;
+
+      const portCapital = p.capital || 50000;
+      const alloc = (s.allocPct || 20) / 100;
+      const dollars = portCapital * alloc;
+      const shares = s.price > 0 ? Math.floor(dollars / s.price) : 0;
+      const actualCost = shares * s.price;
+      const stop = s.price * 0.925;
+      const t20 = s.price * 1.20;
+      const t25 = s.price * 1.25;
+
+      el("posShares").textContent = `${shares} sh ($${actualCost.toLocaleString(undefined, { maximumFractionDigits: 0 })})`;
+      el("stopPrice").textContent = `$${stop.toFixed(2)}`;
+      el("targetPrice").textContent = `$${t20.toFixed(2)} – $${t25.toFixed(2)}`;
+
+      const list = el("checklist");
+      list.innerHTML = "";
+      res.checks.forEach((c) => {
+        const row = document.createElement("div");
+        row.className = "check-item";
+        row.innerHTML = `
+          <span>${c.name}</span>
+          <span class="pill ${c.status}">${c.status.toUpperCase()} (${c.detail})</span>
+        `;
+        list.appendChild(row);
+      });
+
+      updateCharts(s, stop, t20, t25);
+    }
+
+    function updateCharts(s, stop, t20, t25) {
+      const norm = (val, target) => Math.max(0, Math.min(120, Math.round((val / target) * 100)));
+      const radarData = [
+        norm(s.qEps, 25),
+        norm(s.aEps, 25),
+        norm(s.roe, 17),
+        norm(s.volSurge + 50, 90),
+        norm(s.rsRating, 85),
+        s.price >= 15 ? 100 : Math.round((s.price / 15) * 100)
+      ];
+
+      if (radarChartInstance) radarChartInstance.destroy();
+      radarChartInstance = new Chart(el("radarChart"), {
+        type: "radar",
+        data: {
+          labels: ["Qtr EPS (25%+)", "Annual EPS (25%+)", "ROE (17%+)", "Vol Surge (+40%)", "RS Rating (85+)", "Price >= $15"],
+          datasets: [
+            {
+              label: `${s.ticker} vs O'Neil Benchmark (%)`,
+              data: radarData,
+              backgroundColor: "rgba(56, 189, 248, 0.22)",
+              borderColor: "#38bdf8",
+              pointBackgroundColor: "#38bdf8"
+            },
+            {
+              label: "O'Neil Minimum Threshold (100%)",
+              data: [100, 100, 100, 100, 100, 100],
+              backgroundColor: "rgba(16, 185, 129, 0.06)",
+              borderColor: "#10b981",
+              borderDash: [5, 5],
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0, max: 120,
+              ticks: { display: false },
+              grid: { color: "#334155" },
+              angleLines: { color: "#334155" },
+              pointLabels: { color: "#cbd5e1", font: { size: 11 } }
+            }
+          },
+          plugins: { legend: { labels: { color: "#e2e8f0", font: { size: 11 } } } }
+        }
+      });
+
+      if (riskChartInstance) riskChartInstance.destroy();
+      riskChartInstance = new Chart(el("riskChart"), {
+        type: "bar",
+        data: {
+          labels: ["Hard Stop (-7.5%)", "Current Price", "Pivot / High", "Target (+20%)", "Stretch (+25%)"],
+          datasets: [{
+            label: "3:1 Reward-to-Risk Price Levels ($)",
+            data: [stop, s.price, s.pivotPrice, t20, t25].map((v) => Number(v.toFixed(2))),
+            backgroundColor: ["#ef4444", "#38bdf8", "#f59e0b", "#10b981", "#059669"],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: "#334155" }, ticks: { color: "#cbd5e1" } },
+            y: { grid: { display: false }, ticks: { color: "#cbd5e1", font: { size: 11 } } }
+          },
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: `O'Neil Price & Risk Map for ${s.ticker} ($)`, color: "#e2e8f0", font: { size: 12 } }
+          }
+        }
+      });
+    }
+
+    function updatePortfolioAnalysis() {
+      const p = getActivePortfolio();
+      if (!p || !p.stocks || p.stocks.length === 0) {
+        el("portfolioScoreBadge").textContent = "Overall Health: No Stocks";
+        el("portAvgQeps").textContent = "0%";
+        el("portAvgRoe").textContent = "0%";
+        el("portAvgRs").textContent = "0";
+        el("portAllocatedCapital").textContent = `$0 / $${(p ? p.capital : 50000).toLocaleString()}`;
+        el("portTotalRisk").textContent = "$0";
+        el("portAnalysisSummary").textContent = "This portfolio currently has no open positions or watchlisted stocks. Add stocks to generate portfolio-wide CAN SLIM metrics.";
+        return;
+      }
+
+      let totalQeps = 0;
+      let totalRoe = 0;
+      let totalRs = 0;
+      let totalAllocPct = 0;
+      let totalMaxLoss = 0;
+
+      p.stocks.forEach(s => {
+        totalQeps += s.qEps;
+        totalRoe += s.roe;
+        totalRs += s.rsRating;
+        totalAllocPct += (s.allocPct || 20);
+
+        const posDollars = p.capital * ((s.allocPct || 20) / 100);
+        const maxLoss = posDollars * 0.075;
+        totalMaxLoss += maxLoss;
+      });
+
+      const count = p.stocks.length;
+      const avgQeps = totalQeps / count;
+      const avgRoe = totalRoe / count;
+      const avgRs = totalRs / count;
+
+      el("portAvgQeps").textContent = `${avgQeps >= 0 ? '+' : ''}${avgQeps.toFixed(1)}%`;
+      el("portAvgQeps").style.color = avgQeps >= 25 ? 'var(--green)' : (avgQeps >= 15 ? 'var(--yellow)' : 'var(--red)');
+
+      el("portAvgRoe").textContent = `${avgRoe.toFixed(1)}%`;
+      el("portAvgRoe").style.color = avgRoe >= 17 ? 'var(--green)' : 'var(--yellow)';
+
+      el("portAvgRs").textContent = avgRs.toFixed(0);
+      el("portAvgRs").style.color = avgRs >= 80 ? 'var(--green)' : (avgRs >= 70 ? 'var(--yellow)' : 'var(--red)');
+
+      const allocatedDollars = (p.capital * totalAllocPct) / 100;
+      el("portAllocatedCapital").textContent = `$${allocatedDollars.toLocaleString(undefined, {maximumFractionDigits:0})} / $${p.capital.toLocaleString()}`;
+      el("portTotalRisk").textContent = `-$${totalMaxLoss.toLocaleString(undefined, {maximumFractionDigits:0})} (${(totalMaxLoss / p.capital * 100).toFixed(1)}% capital)`;
+
+      let healthScore = 0;
+      if (avgQeps >= 25) healthScore += 35;
+      else if (avgQeps >= 15) healthScore += 20;
+
+      if (avgRoe >= 17) healthScore += 25;
+      else if (avgRoe >= 12) healthScore += 15;
+
+      if (avgRs >= 80) healthScore += 30;
+      else if (avgRs >= 70) healthScore += 15;
+
+      if (count >= 4 && count <= 8) healthScore += 10;
+      else if (count > 8) healthScore -= 10;
+
+      healthScore = Math.min(100, Math.max(0, healthScore));
+
+      let grade = "A+ (Prime O'Neil Leadership)";
+      let colorStyle = "var(--green)";
+      if (healthScore < 50) { grade = "C (High Risk / Sub-Leader Profile)"; colorStyle = "var(--red)"; }
+      else if (healthScore < 75) { grade = "B (Moderate Growth / Needs Filtering)"; colorStyle = "var(--yellow)"; }
+
+      el("portfolioScoreBadge").textContent = `Overall Health: ${grade} (${healthScore}/100)`;
+      el("portfolioScoreBadge").style.color = colorStyle;
+
+      let summaryText = `Portfolio "${p.name}" holds ${count} active stock(s) with an average quarterly EPS growth of ${avgQeps.toFixed(1)}% and an average RS rating of ${avgRs.toFixed(0)}. `;
+      if (count < 4) {
+        summaryText += `O'Neil recommends holding 4 to 8 leading growth stocks to balance high return potential with adequate risk dispersion; you currently have ${count} stock(s). `;
+      } else if (count > 8) {
+        summaryText += `Warning: Holding ${count} stocks exceeds O'Neil's recommended maximum of 6-8 positions, which can dilute top winners. `;
+      }
+      if (avgRs >= 80 && avgQeps >= 25) {
+        summaryText += `The portfolio exhibits strong institutional leadership characteristics aligned with CAN SLIM criteria. Ensure strict adherence to 7.5% stop-losses.`;
+      } else {
+        summaryText += `Some metrics fall below O'Neil's prime growth thresholds (EPS >= 25%, RS >= 80). Review individual stock scores to optimize leader quality.`;
+      }
+      el("portAnalysisSummary").textContent = summaryText;
+    }
+
+    function renderAll() {
+      renderTabs();
+      renderStockCards();
+      const s = getActiveStock();
+      loadStockIntoForm(s);
+      evaluateStock();
+      updatePortfolioAnalysis();
+    }
+
+    renderAll();
   </script>
 </body>
 </html>
